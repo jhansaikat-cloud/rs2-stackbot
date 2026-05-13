@@ -24,13 +24,18 @@ public:
     task_status_pub_ = this->create_publisher<std_msgs::msg::String>("/task_status", 10);
 
     current_state_ = "IDLE";
+    retry_count_ = 0;
+    max_retries_ = 2;
+
     publishStatus(current_state_);
 
-    RCLCPP_INFO(this->get_logger(), "SS3 Task Manager with state machine ready.");
+    RCLCPP_INFO(this->get_logger(), "SS3 Task Manager with retry logic ready.");
   }
 
 private:
   std::string current_state_;
+  int retry_count_;
+  int max_retries_;
 
   void startCallback(const std_msgs::msg::Bool::SharedPtr msg)
   {
@@ -47,11 +52,12 @@ private:
 
     if (msg->data == "DONE")
     {
+      retry_count_ = 0;
       advanceState();
     }
     else if (msg->data == "FAILED")
     {
-      publishStatus("ERROR_MOTION_FAILED");
+      handleFailure("MOTION_FAILED");
     }
   }
 
@@ -61,17 +67,48 @@ private:
 
     if (msg->data == "GRASP_OK")
     {
+      retry_count_ = 0;
       publishStatus("GRASP_VERIFIED");
     }
     else if (msg->data == "GRASP_FAILED")
     {
-      publishStatus("ERROR_GRASP_FAILED");
+      handleFailure("GRASP_FAILED");
+    }
+  }
+
+  void handleFailure(const std::string &failure_type)
+  {
+    retry_count_++;
+
+    RCLCPP_WARN(this->get_logger(),
+      "Failure detected: %s | Retry %d/%d",
+      failure_type.c_str(),
+      retry_count_,
+      max_retries_);
+
+    if (retry_count_ <= max_retries_)
+    {
+      publishStatus("RETRYING");
+
+      RCLCPP_INFO(this->get_logger(),
+        "Retrying current state: %s",
+        current_state_.c_str());
+
+      transitionTo(current_state_);
+    }
+    else
+    {
+      publishStatus("TASK_FAILED");
+
+      RCLCPP_ERROR(this->get_logger(),
+        "Retry limit exceeded. Task failed.");
     }
   }
 
   void transitionTo(const std::string &new_state)
   {
     current_state_ = new_state;
+
     publishStatus(current_state_);
 
     if (current_state_ == "PICK_CUBE_1")
@@ -97,7 +134,9 @@ private:
     else if (current_state_ == "COMPLETE")
     {
       publishStatus("TASK_COMPLETE");
-      RCLCPP_INFO(this->get_logger(), "Task completed successfully.");
+
+      RCLCPP_INFO(this->get_logger(),
+        "Task completed successfully.");
     }
   }
 
@@ -105,10 +144,13 @@ private:
   {
     if (current_state_ == "PICK_CUBE_1")
       transitionTo("PLACE_CUBE_1");
+
     else if (current_state_ == "PLACE_CUBE_1")
       transitionTo("PICK_CUBE_2");
+
     else if (current_state_ == "PICK_CUBE_2")
       transitionTo("PLACE_CUBE_2");
+
     else if (current_state_ == "PLACE_CUBE_2")
       transitionTo("COMPLETE");
   }
@@ -117,24 +159,36 @@ private:
   {
     auto msg = std_msgs::msg::String();
     msg.data = request;
+
     pick_place_pub_->publish(msg);
-    RCLCPP_INFO(this->get_logger(), "Published pick/place request: %s", request.c_str());
+
+    RCLCPP_INFO(this->get_logger(),
+      "Published pick/place request: %s",
+      request.c_str());
   }
 
   void sendGripperCommand(const std::string &command)
   {
     auto msg = std_msgs::msg::String();
     msg.data = command;
+
     gripper_command_pub_->publish(msg);
-    RCLCPP_INFO(this->get_logger(), "Published gripper command: %s", command.c_str());
+
+    RCLCPP_INFO(this->get_logger(),
+      "Published gripper command: %s",
+      command.c_str());
   }
 
   void publishStatus(const std::string &status)
   {
     auto msg = std_msgs::msg::String();
     msg.data = status;
+
     task_status_pub_->publish(msg);
-    RCLCPP_INFO(this->get_logger(), "Task status: %s", status.c_str());
+
+    RCLCPP_INFO(this->get_logger(),
+      "Task status: %s",
+      status.c_str());
   }
 
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr start_sub_;
@@ -149,7 +203,10 @@ private:
 int main(int argc, char **argv)
 {
   rclcpp::init(argc, argv);
+
   rclcpp::spin(std::make_shared<TaskManager>());
+
   rclcpp::shutdown();
+
   return 0;
 }

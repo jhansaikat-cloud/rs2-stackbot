@@ -1,0 +1,254 @@
+[0.000000] (-) TimerEvent: {}
+[0.000381] (interaction_execution) JobQueued: {'identifier': 'interaction_execution', 'dependencies': OrderedDict()}
+[0.000455] (interaction_execution) JobStarted: {'identifier': 'interaction_execution'}
+[0.016649] (interaction_execution) JobProgress: {'identifier': 'interaction_execution', 'progress': 'cmake'}
+[0.018101] (interaction_execution) JobProgress: {'identifier': 'interaction_execution', 'progress': 'build'}
+[0.019598] (interaction_execution) Command: {'cmd': ['/usr/bin/cmake', '--build', '/home/saikat/rs2-stackbot/build/interaction_execution', '--', '-j2', '-l2'], 'cwd': '/home/saikat/rs2-stackbot/build/interaction_execution', 'env': OrderedDict([('LESSOPEN', '| /usr/bin/lesspipe %s'), ('LANGUAGE', 'en_AU:en'), ('USER', 'saikat'), ('SSH_AGENT_PID', '2377'), ('XDG_SESSION_TYPE', 'wayland'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/home/saikat/ros2_ws/install/turtlesim/lib:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/saikat'), ('OLDPWD', '/home/saikat/rs2-stackbot/src/interaction_execution/interaction_execution/src'), ('DESKTOP_SESSION', 'ubuntu'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('SYSTEMD_EXEC_PID', '1340'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus'), ('COLORTERM', 'truecolor'), ('IM_CONFIG_PHASE', '1'), ('WAYLAND_DISPLAY', 'wayland-0'), ('COLCON_PREFIX_PATH', '/home/saikat/rs2-stackbot/install:/home/saikat/ros2_ws/install'), ('ROS_DISTRO', 'humble'), ('LOGNAME', 'saikat'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_SESSION_CLASS', 'user'), ('USERNAME', 'saikat'), ('TERM', 'xterm-256color'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin'), ('SESSION_MANAGER', 'local/saikat:@/tmp/.ICE-unix/1308,unix/saikat:/tmp/.ICE-unix/1308'), ('XDG_MENU_PREFIX', 'gnome-'), ('GNOME_TERMINAL_SCREEN', '/org/gnome/Terminal/screen/2fd41002_ba61_40c7_b7bd_91e562c62792'), ('GNOME_SETUP_DISPLAY', ':1'), ('XDG_RUNTIME_DIR', '/run/user/1000'), ('DISPLAY', ':0'), ('LANG', 'en_US.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('XMODIFIERS', '@im=ibus'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1000/.mutter-Xwaylandauth.LL4KP3'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('GNOME_TERMINAL_SERVICE', ':1.113'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/tmp/ssh-XXXXXX9GDNFP/agent.2376'), ('AMENT_PREFIX_PATH', '/home/saikat/rs2-stackbot/install/interaction_execution:/home/saikat/ros2_ws/install/ur_onrobot_moveit_config:/home/saikat/ros2_ws/install/ur_onrobot_control:/home/saikat/ros2_ws/install/ur_onrobot_description:/home/saikat/ros2_ws/install/turtlesim:/home/saikat/ros2_ws/install/stackbot_execution:/home/saikat/ros2_ws/install/ss2_motion_planning:/home/saikat/ros2_ws/install/onrobot_description:/opt/ros/humble'), ('SHELL', '/bin/bash'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/saikat/rs2-stackbot/build/interaction_execution'), ('LC_ALL', 'en_US.UTF-8'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/home/saikat/ros2_ws/install/ur_onrobot_moveit_config/local/lib/python3.10/dist-packages:/home/saikat/ros2_ws/install/turtlesim/local/lib/python3.10/dist-packages:/home/saikat/ros2_ws/build/stackbot_execution:/home/saikat/ros2_ws/install/stackbot_execution/lib/python3.10/site-packages:/home/saikat/ros2_ws/build/ss2_motion_planning:/home/saikat/ros2_ws/install/ss2_motion_planning/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/home/saikat/rs2-stackbot/install/interaction_execution:/home/saikat/ros2_ws/install/ur_onrobot_moveit_config:/home/saikat/ros2_ws/install/ur_onrobot_control:/home/saikat/ros2_ws/install/ur_onrobot_description:/home/saikat/ros2_ws/install/turtlesim:/home/saikat/ros2_ws/install/onrobot_description:/home/saikat/ros2_ws/install/stackbot_execution:/home/saikat/ros2_ws/install/ss2_motion_planning:/opt/ros/humble')]), 'shell': False}
+[0.098205] (-) TimerEvent: {}
+[0.170629] (interaction_execution) StdoutLine: {'line': b'[ 50%] \x1b[32mBuilding CXX object CMakeFiles/task_manager.dir/src/task_manager.cpp.o\x1b[0m\n'}
+[0.199129] (-) TimerEvent: {}
+[0.301580] (-) TimerEvent: {}
+[0.405987] (-) TimerEvent: {}
+[0.506955] (-) TimerEvent: {}
+[0.607945] (-) TimerEvent: {}
+[0.710114] (-) TimerEvent: {}
+[0.811118] (-) TimerEvent: {}
+[0.913056] (-) TimerEvent: {}
+[1.014906] (-) TimerEvent: {}
+[1.115983] (-) TimerEvent: {}
+[1.216942] (-) TimerEvent: {}
+[1.317898] (-) TimerEvent: {}
+[1.418865] (-) TimerEvent: {}
+[1.520005] (-) TimerEvent: {}
+[1.620928] (-) TimerEvent: {}
+[1.721947] (-) TimerEvent: {}
+[1.823102] (-) TimerEvent: {}
+[1.925111] (-) TimerEvent: {}
+[2.027016] (-) TimerEvent: {}
+[2.128924] (-) TimerEvent: {}
+[2.229908] (-) TimerEvent: {}
+[2.331065] (-) TimerEvent: {}
+[2.431985] (-) TimerEvent: {}
+[2.532906] (-) TimerEvent: {}
+[2.634038] (-) TimerEvent: {}
+[2.735040] (-) TimerEvent: {}
+[2.836030] (-) TimerEvent: {}
+[2.936899] (-) TimerEvent: {}
+[3.038004] (-) TimerEvent: {}
+[3.138945] (-) TimerEvent: {}
+[3.240048] (-) TimerEvent: {}
+[3.341554] (-) TimerEvent: {}
+[3.443062] (-) TimerEvent: {}
+[3.544111] (-) TimerEvent: {}
+[3.645066] (-) TimerEvent: {}
+[3.746263] (-) TimerEvent: {}
+[3.848045] (-) TimerEvent: {}
+[3.949098] (-) TimerEvent: {}
+[4.050134] (-) TimerEvent: {}
+[4.150964] (-) TimerEvent: {}
+[4.252601] (-) TimerEvent: {}
+[4.354484] (-) TimerEvent: {}
+[4.456230] (-) TimerEvent: {}
+[4.557198] (-) TimerEvent: {}
+[4.657951] (-) TimerEvent: {}
+[4.759220] (-) TimerEvent: {}
+[4.860439] (-) TimerEvent: {}
+[4.961995] (-) TimerEvent: {}
+[5.062977] (-) TimerEvent: {}
+[5.163928] (-) TimerEvent: {}
+[5.264921] (-) TimerEvent: {}
+[5.366029] (-) TimerEvent: {}
+[5.466933] (-) TimerEvent: {}
+[5.568013] (-) TimerEvent: {}
+[5.669365] (-) TimerEvent: {}
+[5.771170] (-) TimerEvent: {}
+[5.872224] (-) TimerEvent: {}
+[5.973149] (-) TimerEvent: {}
+[6.073887] (-) TimerEvent: {}
+[6.175130] (-) TimerEvent: {}
+[6.276271] (-) TimerEvent: {}
+[6.378025] (-) TimerEvent: {}
+[6.479917] (-) TimerEvent: {}
+[6.580904] (-) TimerEvent: {}
+[6.681923] (-) TimerEvent: {}
+[6.782895] (-) TimerEvent: {}
+[6.884027] (-) TimerEvent: {}
+[6.985028] (-) TimerEvent: {}
+[7.085942] (-) TimerEvent: {}
+[7.186950] (-) TimerEvent: {}
+[7.288064] (-) TimerEvent: {}
+[7.389030] (-) TimerEvent: {}
+[7.489958] (-) TimerEvent: {}
+[7.591496] (-) TimerEvent: {}
+[7.693125] (-) TimerEvent: {}
+[7.794983] (-) TimerEvent: {}
+[7.895992] (-) TimerEvent: {}
+[7.997039] (-) TimerEvent: {}
+[8.098257] (-) TimerEvent: {}
+[8.199072] (-) TimerEvent: {}
+[8.300014] (-) TimerEvent: {}
+[8.401034] (-) TimerEvent: {}
+[8.502168] (-) TimerEvent: {}
+[8.603502] (-) TimerEvent: {}
+[8.704707] (-) TimerEvent: {}
+[8.805955] (-) TimerEvent: {}
+[8.909716] (-) TimerEvent: {}
+[9.011232] (-) TimerEvent: {}
+[9.113025] (-) TimerEvent: {}
+[9.214145] (-) TimerEvent: {}
+[9.315965] (-) TimerEvent: {}
+[9.416938] (-) TimerEvent: {}
+[9.518160] (-) TimerEvent: {}
+[9.619688] (-) TimerEvent: {}
+[9.721016] (-) TimerEvent: {}
+[9.821886] (-) TimerEvent: {}
+[9.923087] (-) TimerEvent: {}
+[10.024359] (-) TimerEvent: {}
+[10.126063] (-) TimerEvent: {}
+[10.227405] (-) TimerEvent: {}
+[10.328988] (-) TimerEvent: {}
+[10.430027] (-) TimerEvent: {}
+[10.531050] (-) TimerEvent: {}
+[10.631886] (-) TimerEvent: {}
+[10.733142] (-) TimerEvent: {}
+[10.834177] (-) TimerEvent: {}
+[10.935137] (-) TimerEvent: {}
+[11.037063] (-) TimerEvent: {}
+[11.137981] (-) TimerEvent: {}
+[11.239248] (-) TimerEvent: {}
+[11.341899] (-) TimerEvent: {}
+[11.443907] (-) TimerEvent: {}
+[11.544936] (-) TimerEvent: {}
+[11.646135] (-) TimerEvent: {}
+[11.748105] (-) TimerEvent: {}
+[11.849018] (-) TimerEvent: {}
+[11.949938] (-) TimerEvent: {}
+[12.051011] (-) TimerEvent: {}
+[12.152670] (-) TimerEvent: {}
+[12.253519] (-) TimerEvent: {}
+[12.355184] (-) TimerEvent: {}
+[12.456043] (-) TimerEvent: {}
+[12.556929] (-) TimerEvent: {}
+[12.657803] (-) TimerEvent: {}
+[12.760071] (-) TimerEvent: {}
+[12.861931] (-) TimerEvent: {}
+[12.963007] (-) TimerEvent: {}
+[13.064015] (-) TimerEvent: {}
+[13.165088] (-) TimerEvent: {}
+[13.266227] (-) TimerEvent: {}
+[13.368031] (-) TimerEvent: {}
+[13.469532] (-) TimerEvent: {}
+[13.570978] (-) TimerEvent: {}
+[13.671933] (-) TimerEvent: {}
+[13.772973] (-) TimerEvent: {}
+[13.875033] (-) TimerEvent: {}
+[13.976965] (-) TimerEvent: {}
+[14.083219] (-) TimerEvent: {}
+[14.185024] (-) TimerEvent: {}
+[14.286081] (-) TimerEvent: {}
+[14.388469] (-) TimerEvent: {}
+[14.489571] (-) TimerEvent: {}
+[14.614166] (-) TimerEvent: {}
+[14.715941] (-) TimerEvent: {}
+[14.817170] (-) TimerEvent: {}
+[14.918259] (-) TimerEvent: {}
+[15.021292] (-) TimerEvent: {}
+[15.123395] (-) TimerEvent: {}
+[15.225950] (-) TimerEvent: {}
+[15.328093] (-) TimerEvent: {}
+[15.429242] (-) TimerEvent: {}
+[15.530113] (-) TimerEvent: {}
+[15.631117] (-) TimerEvent: {}
+[15.732261] (-) TimerEvent: {}
+[15.833060] (-) TimerEvent: {}
+[15.934219] (-) TimerEvent: {}
+[16.035009] (-) TimerEvent: {}
+[16.136222] (-) TimerEvent: {}
+[16.237271] (-) TimerEvent: {}
+[16.338214] (-) TimerEvent: {}
+[16.439076] (-) TimerEvent: {}
+[16.540143] (-) TimerEvent: {}
+[16.641138] (-) TimerEvent: {}
+[16.742141] (-) TimerEvent: {}
+[16.843308] (-) TimerEvent: {}
+[16.944125] (-) TimerEvent: {}
+[17.045081] (-) TimerEvent: {}
+[17.146126] (-) TimerEvent: {}
+[17.246876] (-) TimerEvent: {}
+[17.348159] (-) TimerEvent: {}
+[17.449234] (-) TimerEvent: {}
+[17.550132] (-) TimerEvent: {}
+[17.651142] (-) TimerEvent: {}
+[17.752119] (-) TimerEvent: {}
+[17.853030] (-) TimerEvent: {}
+[17.954270] (-) TimerEvent: {}
+[18.055259] (-) TimerEvent: {}
+[18.156248] (-) TimerEvent: {}
+[18.257141] (-) TimerEvent: {}
+[18.358573] (-) TimerEvent: {}
+[18.460209] (-) TimerEvent: {}
+[18.562142] (-) TimerEvent: {}
+[18.663933] (-) TimerEvent: {}
+[18.764895] (-) TimerEvent: {}
+[18.865923] (-) TimerEvent: {}
+[18.966943] (-) TimerEvent: {}
+[19.067970] (-) TimerEvent: {}
+[19.169188] (-) TimerEvent: {}
+[19.269975] (-) TimerEvent: {}
+[19.370967] (-) TimerEvent: {}
+[19.472072] (-) TimerEvent: {}
+[19.573121] (-) TimerEvent: {}
+[19.674228] (-) TimerEvent: {}
+[19.776503] (-) TimerEvent: {}
+[19.878064] (-) TimerEvent: {}
+[19.978914] (-) TimerEvent: {}
+[20.080039] (-) TimerEvent: {}
+[20.181029] (-) TimerEvent: {}
+[20.282003] (-) TimerEvent: {}
+[20.383207] (-) TimerEvent: {}
+[20.485351] (-) TimerEvent: {}
+[20.587129] (-) TimerEvent: {}
+[20.688055] (-) TimerEvent: {}
+[20.789173] (-) TimerEvent: {}
+[20.890268] (-) TimerEvent: {}
+[20.991251] (-) TimerEvent: {}
+[21.092341] (-) TimerEvent: {}
+[21.193225] (-) TimerEvent: {}
+[21.238337] (interaction_execution) StdoutLine: {'line': b'[100%] \x1b[32m\x1b[1mLinking CXX executable task_manager\x1b[0m\n'}
+[21.293958] (-) TimerEvent: {}
+[21.395011] (-) TimerEvent: {}
+[21.496119] (-) TimerEvent: {}
+[21.597118] (-) TimerEvent: {}
+[21.698060] (-) TimerEvent: {}
+[21.799088] (-) TimerEvent: {}
+[21.900460] (-) TimerEvent: {}
+[22.003034] (-) TimerEvent: {}
+[22.104056] (-) TimerEvent: {}
+[22.206065] (-) TimerEvent: {}
+[22.306995] (-) TimerEvent: {}
+[22.321420] (interaction_execution) StdoutLine: {'line': b'[100%] Built target task_manager\n'}
+[22.349125] (interaction_execution) CommandEnded: {'returncode': 0}
+[22.352009] (interaction_execution) JobProgress: {'identifier': 'interaction_execution', 'progress': 'install'}
+[22.371359] (interaction_execution) Command: {'cmd': ['/usr/bin/cmake', '--install', '/home/saikat/rs2-stackbot/build/interaction_execution'], 'cwd': '/home/saikat/rs2-stackbot/build/interaction_execution', 'env': OrderedDict([('LESSOPEN', '| /usr/bin/lesspipe %s'), ('LANGUAGE', 'en_AU:en'), ('USER', 'saikat'), ('SSH_AGENT_PID', '2377'), ('XDG_SESSION_TYPE', 'wayland'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/home/saikat/ros2_ws/install/turtlesim/lib:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/saikat'), ('OLDPWD', '/home/saikat/rs2-stackbot/src/interaction_execution/interaction_execution/src'), ('DESKTOP_SESSION', 'ubuntu'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('SYSTEMD_EXEC_PID', '1340'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus'), ('COLORTERM', 'truecolor'), ('IM_CONFIG_PHASE', '1'), ('WAYLAND_DISPLAY', 'wayland-0'), ('COLCON_PREFIX_PATH', '/home/saikat/rs2-stackbot/install:/home/saikat/ros2_ws/install'), ('ROS_DISTRO', 'humble'), ('LOGNAME', 'saikat'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_SESSION_CLASS', 'user'), ('USERNAME', 'saikat'), ('TERM', 'xterm-256color'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin'), ('SESSION_MANAGER', 'local/saikat:@/tmp/.ICE-unix/1308,unix/saikat:/tmp/.ICE-unix/1308'), ('XDG_MENU_PREFIX', 'gnome-'), ('GNOME_TERMINAL_SCREEN', '/org/gnome/Terminal/screen/2fd41002_ba61_40c7_b7bd_91e562c62792'), ('GNOME_SETUP_DISPLAY', ':1'), ('XDG_RUNTIME_DIR', '/run/user/1000'), ('DISPLAY', ':0'), ('LANG', 'en_US.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('XMODIFIERS', '@im=ibus'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1000/.mutter-Xwaylandauth.LL4KP3'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('GNOME_TERMINAL_SERVICE', ':1.113'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/tmp/ssh-XXXXXX9GDNFP/agent.2376'), ('AMENT_PREFIX_PATH', '/home/saikat/rs2-stackbot/install/interaction_execution:/home/saikat/ros2_ws/install/ur_onrobot_moveit_config:/home/saikat/ros2_ws/install/ur_onrobot_control:/home/saikat/ros2_ws/install/ur_onrobot_description:/home/saikat/ros2_ws/install/turtlesim:/home/saikat/ros2_ws/install/stackbot_execution:/home/saikat/ros2_ws/install/ss2_motion_planning:/home/saikat/ros2_ws/install/onrobot_description:/opt/ros/humble'), ('SHELL', '/bin/bash'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/saikat/rs2-stackbot/build/interaction_execution'), ('LC_ALL', 'en_US.UTF-8'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/home/saikat/ros2_ws/install/ur_onrobot_moveit_config/local/lib/python3.10/dist-packages:/home/saikat/ros2_ws/install/turtlesim/local/lib/python3.10/dist-packages:/home/saikat/ros2_ws/build/stackbot_execution:/home/saikat/ros2_ws/install/stackbot_execution/lib/python3.10/site-packages:/home/saikat/ros2_ws/build/ss2_motion_planning:/home/saikat/ros2_ws/install/ss2_motion_planning/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/home/saikat/rs2-stackbot/install/interaction_execution:/home/saikat/ros2_ws/install/ur_onrobot_moveit_config:/home/saikat/ros2_ws/install/ur_onrobot_control:/home/saikat/ros2_ws/install/ur_onrobot_description:/home/saikat/ros2_ws/install/turtlesim:/home/saikat/ros2_ws/install/onrobot_description:/home/saikat/ros2_ws/install/stackbot_execution:/home/saikat/ros2_ws/install/ss2_motion_planning:/opt/ros/humble')]), 'shell': False}
+[22.390390] (interaction_execution) StdoutLine: {'line': b'-- Install configuration: ""\n'}
+[22.391405] (interaction_execution) StdoutLine: {'line': b'-- Installing: /home/saikat/rs2-stackbot/install/interaction_execution/lib/interaction_execution/task_manager\n'}
+[22.401203] (interaction_execution) StdoutLine: {'line': b'-- Set runtime path of "/home/saikat/rs2-stackbot/install/interaction_execution/lib/interaction_execution/task_manager" to ""\n'}
+[22.402114] (interaction_execution) StdoutLine: {'line': b'-- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/ament_index/resource_index/package_run_dependencies/interaction_execution\n'}
+[22.402557] (interaction_execution) StdoutLine: {'line': b'-- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/ament_index/resource_index/parent_prefix_path/interaction_execution\n'}
+[22.402886] (interaction_execution) StdoutLine: {'line': b'-- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/environment/ament_prefix_path.sh\n'}
+[22.403219] (interaction_execution) StdoutLine: {'line': b'-- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/environment/ament_prefix_path.dsv\n'}
+[22.403553] (interaction_execution) StdoutLine: {'line': b'-- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/environment/path.sh\n'}
+[22.404040] (interaction_execution) StdoutLine: {'line': b'-- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/environment/path.dsv\n'}
+[22.404563] (interaction_execution) StdoutLine: {'line': b'-- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/local_setup.bash\n'}
+[22.404884] (interaction_execution) StdoutLine: {'line': b'-- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/local_setup.sh\n'}
+[22.405142] (interaction_execution) StdoutLine: {'line': b'-- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/local_setup.zsh\n'}
+[22.405289] (interaction_execution) StdoutLine: {'line': b'-- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/local_setup.dsv\n'}
+[22.405439] (interaction_execution) StdoutLine: {'line': b'-- Installing: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/package.dsv\n'}
+[22.405555] (interaction_execution) StdoutLine: {'line': b'-- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/ament_index/resource_index/packages/interaction_execution\n'}
+[22.405830] (interaction_execution) StdoutLine: {'line': b'-- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/cmake/interaction_executionConfig.cmake\n'}
+[22.405972] (interaction_execution) StdoutLine: {'line': b'-- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/cmake/interaction_executionConfig-version.cmake\n'}
+[22.406051] (interaction_execution) StdoutLine: {'line': b'-- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/package.xml\n'}
+[22.407891] (-) TimerEvent: {}
+[22.411235] (interaction_execution) CommandEnded: {'returncode': 0}
+[22.464364] (interaction_execution) JobEnded: {'identifier': 'interaction_execution', 'rc': 0}
+[22.466540] (-) EventReactorShutdown: {}
