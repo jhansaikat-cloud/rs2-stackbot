@@ -1,0 +1,117 @@
+[0.000000] (-) TimerEvent: {}
+[0.000380] (interaction_execution) JobQueued: {'identifier': 'interaction_execution', 'dependencies': OrderedDict()}
+[0.000459] (interaction_execution) JobStarted: {'identifier': 'interaction_execution'}
+[0.019633] (interaction_execution) JobProgress: {'identifier': 'interaction_execution', 'progress': 'cmake'}
+[0.021753] (interaction_execution) JobProgress: {'identifier': 'interaction_execution', 'progress': 'build'}
+[0.023526] (interaction_execution) Command: {'cmd': ['/usr/bin/cmake', '--build', '/home/saikat/rs2-stackbot/build/interaction_execution', '--', '-j2', '-l2'], 'cwd': '/home/saikat/rs2-stackbot/build/interaction_execution', 'env': OrderedDict([('LESSOPEN', '| /usr/bin/lesspipe %s'), ('LANGUAGE', 'en_AU:en'), ('USER', 'saikat'), ('SSH_AGENT_PID', '2377'), ('XDG_SESSION_TYPE', 'wayland'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/home/saikat/ros2_ws/install/turtlesim/lib:/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/saikat'), ('OLDPWD', '/home/saikat/rs2-stackbot/src/interaction_execution/interaction_execution/src'), ('DESKTOP_SESSION', 'ubuntu'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('SYSTEMD_EXEC_PID', '1340'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1000/bus'), ('COLORTERM', 'truecolor'), ('IM_CONFIG_PHASE', '1'), ('WAYLAND_DISPLAY', 'wayland-0'), ('COLCON_PREFIX_PATH', '/home/saikat/rs2-stackbot/install:/home/saikat/ros2_ws/install'), ('ROS_DISTRO', 'humble'), ('LOGNAME', 'saikat'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_SESSION_CLASS', 'user'), ('USERNAME', 'saikat'), ('TERM', 'xterm-256color'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin'), ('SESSION_MANAGER', 'local/saikat:@/tmp/.ICE-unix/1308,unix/saikat:/tmp/.ICE-unix/1308'), ('XDG_MENU_PREFIX', 'gnome-'), ('GNOME_TERMINAL_SCREEN', '/org/gnome/Terminal/screen/2fd41002_ba61_40c7_b7bd_91e562c62792'), ('GNOME_SETUP_DISPLAY', ':1'), ('XDG_RUNTIME_DIR', '/run/user/1000'), ('DISPLAY', ':0'), ('LANG', 'en_US.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('XMODIFIERS', '@im=ibus'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1000/.mutter-Xwaylandauth.LL4KP3'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('GNOME_TERMINAL_SERVICE', ':1.113'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/tmp/ssh-XXXXXX9GDNFP/agent.2376'), ('AMENT_PREFIX_PATH', '/home/saikat/rs2-stackbot/install/interaction_execution:/home/saikat/ros2_ws/install/ur_onrobot_moveit_config:/home/saikat/ros2_ws/install/ur_onrobot_control:/home/saikat/ros2_ws/install/ur_onrobot_description:/home/saikat/ros2_ws/install/turtlesim:/home/saikat/ros2_ws/install/stackbot_execution:/home/saikat/ros2_ws/install/ss2_motion_planning:/home/saikat/ros2_ws/install/onrobot_description:/opt/ros/humble'), ('SHELL', '/bin/bash'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/saikat/rs2-stackbot/build/interaction_execution'), ('LC_ALL', 'en_US.UTF-8'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/home/saikat/ros2_ws/install/ur_onrobot_moveit_config/local/lib/python3.10/dist-packages:/home/saikat/ros2_ws/install/turtlesim/local/lib/python3.10/dist-packages:/home/saikat/ros2_ws/build/stackbot_execution:/home/saikat/ros2_ws/install/stackbot_execution/lib/python3.10/site-packages:/home/saikat/ros2_ws/build/ss2_motion_planning:/home/saikat/ros2_ws/install/ss2_motion_planning/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/home/saikat/rs2-stackbot/install/interaction_execution:/home/saikat/ros2_ws/install/ur_onrobot_moveit_config:/home/saikat/ros2_ws/install/ur_onrobot_control:/home/saikat/ros2_ws/install/ur_onrobot_description:/home/saikat/ros2_ws/install/turtlesim:/home/saikat/ros2_ws/install/onrobot_description:/home/saikat/ros2_ws/install/stackbot_execution:/home/saikat/ros2_ws/install/ss2_motion_planning:/opt/ros/humble')]), 'shell': False}
+[0.098205] (-) TimerEvent: {}
+[0.101728] (interaction_execution) StdoutLine: {'line': b'\x1b[35m\x1b[1mConsolidate compiler generated dependencies of target task_manager\x1b[0m\n'}
+[0.135037] (interaction_execution) StdoutLine: {'line': b'[ 50%] \x1b[32mBuilding CXX object CMakeFiles/task_manager.dir/src/task_manager.cpp.o\x1b[0m\n'}
+[0.199427] (-) TimerEvent: {}
+[0.300345] (-) TimerEvent: {}
+[0.401772] (-) TimerEvent: {}
+[0.503274] (-) TimerEvent: {}
+[0.604254] (-) TimerEvent: {}
+[0.705458] (-) TimerEvent: {}
+[0.806506] (-) TimerEvent: {}
+[0.908241] (-) TimerEvent: {}
+[1.009250] (-) TimerEvent: {}
+[1.110345] (-) TimerEvent: {}
+[1.211676] (-) TimerEvent: {}
+[1.313429] (-) TimerEvent: {}
+[1.414361] (-) TimerEvent: {}
+[1.515351] (-) TimerEvent: {}
+[1.617245] (-) TimerEvent: {}
+[1.718143] (-) TimerEvent: {}
+[1.819326] (-) TimerEvent: {}
+[1.920280] (-) TimerEvent: {}
+[2.021204] (-) TimerEvent: {}
+[2.122176] (-) TimerEvent: {}
+[2.223207] (-) TimerEvent: {}
+[2.324510] (-) TimerEvent: {}
+[2.426343] (-) TimerEvent: {}
+[2.527388] (-) TimerEvent: {}
+[2.628418] (-) TimerEvent: {}
+[2.729868] (-) TimerEvent: {}
+[2.830812] (-) TimerEvent: {}
+[2.932236] (-) TimerEvent: {}
+[3.033341] (-) TimerEvent: {}
+[3.134408] (-) TimerEvent: {}
+[3.235267] (-) TimerEvent: {}
+[3.336644] (-) TimerEvent: {}
+[3.437841] (-) TimerEvent: {}
+[3.539316] (-) TimerEvent: {}
+[3.640159] (-) TimerEvent: {}
+[3.741159] (-) TimerEvent: {}
+[3.842251] (-) TimerEvent: {}
+[3.943326] (-) TimerEvent: {}
+[4.044458] (-) TimerEvent: {}
+[4.146214] (-) TimerEvent: {}
+[4.247179] (-) TimerEvent: {}
+[4.249757] (interaction_execution) StderrLine: {'line': b'\x1b[01m\x1b[K/home/saikat/rs2-stackbot/src/interaction_execution/interaction_execution/src/task_manager.cpp:\x1b[m\x1b[K In member function \xe2\x80\x98\x1b[01m\x1b[Kvoid TaskManager::handleFailure(const string&)\x1b[m\x1b[K\xe2\x80\x99:\n'}
+[4.250309] (interaction_execution) StderrLine: {'line': b'\x1b[01m\x1b[K/home/saikat/rs2-stackbot/src/interaction_execution/interaction_execution/src/task_manager.cpp:82:5:\x1b[m\x1b[K \x1b[01;31m\x1b[Kerror: \x1b[m\x1b[K\xe2\x80\x98\x1b[01m\x1b[Ktotal_retries_\x1b[m\x1b[K\xe2\x80\x99 was not declared in this scope; did you mean \xe2\x80\x98\x1b[01m\x1b[Kmax_retries_\x1b[m\x1b[K\xe2\x80\x99?\n'}
+[4.250468] (interaction_execution) StderrLine: {'line': b'   82 |     \x1b[01;31m\x1b[Ktotal_retries_\x1b[m\x1b[K++;\n'}
+[4.250543] (interaction_execution) StderrLine: {'line': b'      |     \x1b[01;31m\x1b[K^~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[4.250609] (interaction_execution) StderrLine: {'line': b'      |     \x1b[32m\x1b[Kmax_retries_\x1b[m\x1b[K\n'}
+[4.266677] (interaction_execution) StderrLine: {'line': b'\x1b[01m\x1b[K/home/saikat/rs2-stackbot/src/interaction_execution/interaction_execution/src/task_manager.cpp:\x1b[m\x1b[K In member function \xe2\x80\x98\x1b[01m\x1b[Kvoid TaskManager::advanceState()\x1b[m\x1b[K\xe2\x80\x99:\n'}
+[4.266860] (interaction_execution) StderrLine: {'line': b'\x1b[01m\x1b[K/home/saikat/rs2-stackbot/src/interaction_execution/interaction_execution/src/task_manager.cpp:145:9:\x1b[m\x1b[K \x1b[01;31m\x1b[Kerror: \x1b[m\x1b[K\xe2\x80\x98\x1b[01m\x1b[Kcompleted_steps_\x1b[m\x1b[K\xe2\x80\x99 was not declared in this scope\n'}
+[4.266934] (interaction_execution) StderrLine: {'line': b'  145 |         \x1b[01;31m\x1b[Kcompleted_steps_\x1b[m\x1b[K++;\n'}
+[4.267078] (interaction_execution) StderrLine: {'line': b'      |         \x1b[01;31m\x1b[K^~~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[4.348222] (-) TimerEvent: {}
+[4.449219] (-) TimerEvent: {}
+[4.550219] (-) TimerEvent: {}
+[4.651344] (-) TimerEvent: {}
+[4.752417] (-) TimerEvent: {}
+[4.853754] (-) TimerEvent: {}
+[4.955232] (-) TimerEvent: {}
+[5.056194] (-) TimerEvent: {}
+[5.157237] (-) TimerEvent: {}
+[5.258226] (-) TimerEvent: {}
+[5.359206] (-) TimerEvent: {}
+[5.460421] (-) TimerEvent: {}
+[5.561470] (-) TimerEvent: {}
+[5.662967] (-) TimerEvent: {}
+[5.764243] (-) TimerEvent: {}
+[5.865426] (-) TimerEvent: {}
+[5.966354] (-) TimerEvent: {}
+[6.067338] (-) TimerEvent: {}
+[6.168300] (-) TimerEvent: {}
+[6.269315] (-) TimerEvent: {}
+[6.370356] (-) TimerEvent: {}
+[6.471336] (-) TimerEvent: {}
+[6.572712] (-) TimerEvent: {}
+[6.673833] (-) TimerEvent: {}
+[6.775184] (-) TimerEvent: {}
+[6.876317] (-) TimerEvent: {}
+[6.977330] (-) TimerEvent: {}
+[7.078418] (-) TimerEvent: {}
+[7.179537] (-) TimerEvent: {}
+[7.280500] (-) TimerEvent: {}
+[7.381397] (-) TimerEvent: {}
+[7.482419] (-) TimerEvent: {}
+[7.583797] (-) TimerEvent: {}
+[7.685218] (-) TimerEvent: {}
+[7.786598] (-) TimerEvent: {}
+[7.888176] (-) TimerEvent: {}
+[7.989171] (-) TimerEvent: {}
+[8.090443] (-) TimerEvent: {}
+[8.191871] (-) TimerEvent: {}
+[8.293264] (-) TimerEvent: {}
+[8.394243] (-) TimerEvent: {}
+[8.495550] (-) TimerEvent: {}
+[8.596565] (-) TimerEvent: {}
+[8.697558] (-) TimerEvent: {}
+[8.799135] (-) TimerEvent: {}
+[8.900300] (-) TimerEvent: {}
+[9.001403] (-) TimerEvent: {}
+[9.102543] (-) TimerEvent: {}
+[9.203316] (-) TimerEvent: {}
+[9.304305] (-) TimerEvent: {}
+[9.405457] (-) TimerEvent: {}
+[9.479547] (interaction_execution) StderrLine: {'line': b'gmake[2]: *** [CMakeFiles/task_manager.dir/build.make:76: CMakeFiles/task_manager.dir/src/task_manager.cpp.o] Error 1\n'}
+[9.479730] (interaction_execution) StderrLine: {'line': b'gmake[1]: *** [CMakeFiles/Makefile2:137: CMakeFiles/task_manager.dir/all] Error 2\n'}
+[9.482142] (interaction_execution) StderrLine: {'line': b'gmake: *** [Makefile:146: all] Error 2\n'}
+[9.483754] (interaction_execution) CommandEnded: {'returncode': 2}
+[9.505224] (interaction_execution) JobEnded: {'identifier': 'interaction_execution', 'rc': 2}
+[9.506038] (-) TimerEvent: {}
+[9.517801] (-) EventReactorShutdown: {}

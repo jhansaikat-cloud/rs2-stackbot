@@ -26,6 +26,9 @@ public:
     current_state_ = "IDLE";
     retry_count_ = 0;
     max_retries_ = 2;
+    
+    total_retries_ = 0;
+    completed_steps_ = 0;
 
     publishStatus(current_state_);
 
@@ -36,6 +39,9 @@ private:
   std::string current_state_;
   int retry_count_;
   int max_retries_;
+  
+  int total_retries_;
+  int completed_steps_;
 
   void startCallback(const std_msgs::msg::Bool::SharedPtr msg)
   {
@@ -79,7 +85,7 @@ private:
   void handleFailure(const std::string &failure_type)
   {
     retry_count_++;
-
+    total_retries_++;
     RCLCPP_WARN(this->get_logger(),
       "Failure detected: %s | Retry %d/%d",
       failure_type.c_str(),
@@ -142,6 +148,12 @@ private:
 
   void advanceState()
   {
+	completed_steps_++;
+
+	RCLCPP_INFO(this->get_logger(),
+	  "Completed steps: %d",
+	  completed_steps_);
+	  
     if (current_state_ == "PICK_CUBE_1")
       transitionTo("PLACE_CUBE_1");
 
