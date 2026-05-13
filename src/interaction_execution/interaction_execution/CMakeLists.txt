@@ -22,5 +22,11 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+add_executable(task_manager src/task_manager.cpp)
+ament_target_dependencies(task_manager rclcpp std_msgs geometry_msgs)
 
+install(TARGETS
+  task_manager
+  DESTINATION lib/${PROJECT_NAME}
+)
 ament_package()

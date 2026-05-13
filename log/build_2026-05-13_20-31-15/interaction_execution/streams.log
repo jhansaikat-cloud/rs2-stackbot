@@ -1,0 +1,26 @@
+[0.026s] Invoking command in '/home/saikat/rs2-stackbot/build/interaction_execution': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/saikat/ros2_ws/install/stackbot_execution:/home/saikat/ros2_ws/install/ss2_motion_planning:/opt/ros/humble /usr/bin/cmake --build /home/saikat/rs2-stackbot/build/interaction_execution -- -j2 -l2
+[0.103s] [35m[1mConsolidate compiler generated dependencies of target task_manager[0m
+[0.135s] [ 50%] [32mBuilding CXX object CMakeFiles/task_manager.dir/src/task_manager.cpp.o[0m
+[24.058s] [100%] [32m[1mLinking CXX executable task_manager[0m
+[25.119s] [100%] Built target task_manager
+[25.140s] Invoked command in '/home/saikat/rs2-stackbot/build/interaction_execution' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/saikat/ros2_ws/install/stackbot_execution:/home/saikat/ros2_ws/install/ss2_motion_planning:/opt/ros/humble /usr/bin/cmake --build /home/saikat/rs2-stackbot/build/interaction_execution -- -j2 -l2
+[25.170s] Invoking command in '/home/saikat/rs2-stackbot/build/interaction_execution': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/saikat/ros2_ws/install/stackbot_execution:/home/saikat/ros2_ws/install/ss2_motion_planning:/opt/ros/humble /usr/bin/cmake --install /home/saikat/rs2-stackbot/build/interaction_execution
+[25.191s] -- Install configuration: ""
+[25.191s] -- Installing: /home/saikat/rs2-stackbot/install/interaction_execution/lib/interaction_execution/task_manager
+[25.205s] -- Set runtime path of "/home/saikat/rs2-stackbot/install/interaction_execution/lib/interaction_execution/task_manager" to ""
+[25.206s] -- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/ament_index/resource_index/package_run_dependencies/interaction_execution
+[25.207s] -- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/ament_index/resource_index/parent_prefix_path/interaction_execution
+[25.207s] -- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/environment/ament_prefix_path.sh
+[25.207s] -- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/environment/ament_prefix_path.dsv
+[25.207s] -- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/environment/path.sh
+[25.207s] -- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/environment/path.dsv
+[25.208s] -- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/local_setup.bash
+[25.208s] -- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/local_setup.sh
+[25.208s] -- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/local_setup.zsh
+[25.208s] -- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/local_setup.dsv
+[25.208s] -- Installing: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/package.dsv
+[25.209s] -- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/ament_index/resource_index/packages/interaction_execution
+[25.209s] -- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/cmake/interaction_executionConfig.cmake
+[25.210s] -- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/cmake/interaction_executionConfig-version.cmake
+[25.210s] -- Up-to-date: /home/saikat/rs2-stackbot/install/interaction_execution/share/interaction_execution/package.xml
+[25.214s] Invoked command in '/home/saikat/rs2-stackbot/build/interaction_execution' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/saikat/ros2_ws/install/stackbot_execution:/home/saikat/ros2_ws/install/ss2_motion_planning:/opt/ros/humble /usr/bin/cmake --install /home/saikat/rs2-stackbot/build/interaction_execution
