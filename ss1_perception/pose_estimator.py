@@ -66,7 +66,7 @@ class PoseEstimatorNode(Node):
             [self.colour_sub, self.depth_sub], queue_size=10, slop=0.1)
         self.sync.registerCallback(self.callback)
 
-        self.pose_pub  = self.create_publisher(PoseArray, '/detected_objects', 10)
+        self.pose_pub  = self.create_publisher(PoseArray, '/raw_detected_objects', 10)
         self.label_pub = self.create_publisher(String,    '/object_labels',    10)
 
         # Per-colour, per-cluster: {colour: {cluster_id: [(X,Y,Z), ...]}}
@@ -76,7 +76,7 @@ class PoseEstimatorNode(Node):
         self._last_log         = {}
 
         self.get_logger().info(
-            'PoseEstimator ready — publishing on /detected_objects and /object_labels')
+            'PoseEstimator ready — publishing on /raw_detected_objects and /object_labels')
 
     # ------------------------------------------------------------------
     # Clustering helpers
