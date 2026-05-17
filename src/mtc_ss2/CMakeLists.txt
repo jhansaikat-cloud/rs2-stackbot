@@ -12,13 +12,14 @@ find_package(rclcpp REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
 # mtc_ss2.cpp
 add_executable(mtc_ss2 src/mtc_ss2.cpp)
-ament_target_dependencies(mtc_ss2 moveit_task_constructor_core rclcpp tf2 tf2_geometry_msgs geometry_msgs)
+ament_target_dependencies(mtc_ss2 moveit_task_constructor_core rclcpp tf2 tf2_geometry_msgs geometry_msgs std_msgs)
 target_include_directories(mtc_ss2 PUBLIC
 $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 $<INSTALL_INTERFACE:include>)
@@ -32,6 +33,7 @@ ament_target_dependencies(retrieval_ss2
   tf2
   tf2_geometry_msgs
   geometry_msgs
+  std_msgs
 )
 target_include_directories(retrieval_ss2 PUBLIC
 $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

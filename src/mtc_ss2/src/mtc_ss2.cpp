@@ -24,29 +24,29 @@
 static const rclcpp::Logger LOGGER = rclcpp::get_logger("mtc_ss2");
 namespace mtc = moveit::task_constructor;
 
-// ── ROBOT CONFIG ──────────────────────────────────────────────────────────────
+//      ROBOT CONFIG                                                                                                                             
 static const std::string ARM_GROUP   = "ur_onrobot_manipulator";
 static const std::string HAND_GROUP  = "ur_onrobot_gripper";
 static const std::string HAND_FRAME  = "gripper_tcp";
 static const std::string FIXED_FRAME = "base_link";
 
-// ── CUBE DIMENSIONS ───────────────────────────────────────────────────────────
+//      CUBE DIMENSIONS                                                                                                                       
 static constexpr double CUBE_SIZE       = 0.050;
 static constexpr double PLACE_CLEARANCE = 0.005;
 static constexpr double SURFACE_Z       = 0.001;
 
-// ── PYRAMID LAYOUT ────────────────────────────────────────────────────────────
+//      PYRAMID LAYOUT                                                                                                                         
 static constexpr double PYRAMID_X = 0.012;
 static constexpr double PYRAMID_Y = 0.320;
 static constexpr double STEP      = CUBE_SIZE + 0.005;
 
-// ── GRIPPER DOWN ORIENTATION (measured, 180 deg around world Y) ───────────────
+//      GRIPPER DOWN ORIENTATION (measured, 180 deg around world Y)                               
 static constexpr double GRIPPER_DOWN_QX = 0.0;
 static constexpr double GRIPPER_DOWN_QY = 1.0;
 static constexpr double GRIPPER_DOWN_QZ = 0.0;
 static constexpr double GRIPPER_DOWN_QW = 0.0;
 
-// ── PRE-PLACE HEIGHT OFFSET ───────────────────────────────────────────────────
+//      PRE-PLACE HEIGHT OFFSET                                                                                                       
 static constexpr double PRE_PLACE_HEIGHT = 0.10;
 
 struct CubeInfo
@@ -73,12 +73,10 @@ double placeCentreZ(int layer)
   return SURFACE_Z + PLACE_CLEARANCE + (layer - 1) * CUBE_SIZE + CUBE_SIZE / 2.0;
 }
 
-// Account for the offset between TCP and cube centre when grasped
-static constexpr double GRASP_TCP_TO_CUBE_OFFSET = 0.0;  // parameter default 0.010
+static constexpr double GRASP_TCP_TO_CUBE_OFFSET = 0.0;  // Potentially unecessary
 
 double placeTcpZ(int layer)
 {
-  // TCP needs to be higher than cube centre by the grip offset
   return placeCentreZ(layer) + GRASP_TCP_TO_CUBE_OFFSET;
 }
 
@@ -170,10 +168,10 @@ void MTCPyramidNode::setupPlanningScene(const std::vector<CubeInfo>& cubes)
   table.id = "table";
   shape_msgs::msg::SolidPrimitive prim;
   prim.type = prim.BOX;
-  prim.dimensions = { 2.0, 2.0, 0.02 };  // big thin slab
+  prim.dimensions = { 2.0, 2.0, 0.02 }; 
   geometry_msgs::msg::Pose tpose;
   tpose.orientation.w = 1.0;
-  tpose.position.z = -0.02;  // top surface 1cm below SURFACE_Z
+  tpose.position.z = -0.02;  
   table.primitives.push_back(prim);
   table.primitive_poses.push_back(tpose);
   table.operation = table.ADD;
@@ -196,7 +194,6 @@ void MTCPyramidNode::addPlacedObject(const CubeInfo& cube)
 {
   moveit::planning_interface::PlanningSceneInterface psi;
 
-  // Step 1: remove the detached cube (sitting at TCP height after place)
   {
     moveit_msgs::msg::CollisionObject remove_old;
     remove_old.id = cube.name;
@@ -206,7 +203,6 @@ void MTCPyramidNode::addPlacedObject(const CubeInfo& cube)
   }
   std::this_thread::sleep_for(std::chrono::milliseconds(300));
 
-  // Step 2: add the placed cube at the intended location
   {
     moveit_msgs::msg::CollisionObject obj;
     obj.id = cube.name + "_placed";
@@ -247,7 +243,7 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
   cartesian_planner->setMaxAccelerationScalingFactor(1.0);
   cartesian_planner->setStepSize(0.002);
 
-  // ── CURRENT STATE ───────────────────────────────────────────────────────────
+  //      CURRENT STATE                                                                                                                       
   mtc::Stage* current_state_ptr = nullptr;
   {
     auto stage = std::make_unique<mtc::stages::CurrentState>("current state");
@@ -255,7 +251,7 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
     task.add(std::move(stage));
   }
 
-  // ── OPEN GRIPPER ────────────────────────────────────────────────────────────
+  //      OPEN GRIPPER                                                                                                                         
   {
     auto stage = std::make_unique<mtc::stages::MoveTo>("open gripper", interpolation_planner);
     stage->setGroup(HAND_GROUP);
@@ -263,7 +259,7 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
     task.add(std::move(stage));
   }
 
-  // ── ALLOW CABLE CONNECTOR COLLISIONS WITH ALL CUBES ─────────────────────────
+  //      ALLOW CABLE CONNECTOR COLLISIONS WITH ALL CUBES                                                   
   {
     auto stage = std::make_unique<mtc::stages::ModifyPlanningScene>(
       "allow cable connector collisions");
@@ -278,7 +274,7 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
     task.add(std::move(stage));
   }
 
-  // ── MOVE TO PRE-PICK ────────────────────────────────────────────────────────
+  //      MOVE TO PRE-PICK                                                                                                                 
   {
     auto stage = std::make_unique<mtc::stages::Connect>(
       "move to pick",
@@ -288,13 +284,13 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
     task.add(std::move(stage));
   }
 
-  // ── PICK CONTAINER ──────────────────────────────────────────────────────────
+  //      PICK CONTAINER                                                                                                                     
   {
     auto pick = std::make_unique<mtc::SerialContainer>("pick " + cube.name);
     task.properties().exposeTo(pick->properties(), { "eef", "group", "ik_frame" });
     pick->properties().configureInitFrom(mtc::Stage::PARENT, { "eef", "group", "ik_frame" });
 
-    // Approach — descend toward cube in world -Z
+    // Approach 
     {
       auto stage = std::make_unique<mtc::stages::MoveRelative>("approach", cartesian_planner);
       stage->properties().set("marker_ns", "approach");
@@ -315,7 +311,7 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
       stage->properties().set("marker_ns", "grasp_pose");
       stage->setPreGraspPose("open");
       stage->setObject(cube.name);
-      stage->setAngleDelta(M_PI / 6);  // 12 grasp samples — more options for edge-of-reach cubes
+      stage->setAngleDelta(M_PI / 6);  // Param
       stage->setMonitoredStage(current_state_ptr);
 
       Eigen::Isometry3d grasp_frame_transform = Eigen::Isometry3d::Identity();
@@ -371,7 +367,7 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
       pick->insert(std::move(stage));
     }
 
-    // Lift — straight up in world +Z
+    // Lift
     {
       auto stage = std::make_unique<mtc::stages::MoveRelative>("lift", cartesian_planner);
       stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
@@ -388,7 +384,7 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
     task.add(std::move(pick));
   }
 
-  // ── PRE-PLACE: move above place target with gripper pointing straight down ──
+  //      PRE-PLACE   
   {
     auto stage = std::make_unique<mtc::stages::MoveTo>("pre-place", sampling_planner);
     stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
@@ -405,7 +401,7 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
     task.add(std::move(stage));
   }
 
-  // // ── PRE-PLACE: Cartesian straight line from lift to hover pose ───────────────
+  // //      PRE-PLACE: Cartesian                          
   // {
   //   auto stage = std::make_unique<mtc::stages::MoveTo>("pre-place", cartesian_planner);
   //   stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
@@ -422,7 +418,7 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
   //   task.add(std::move(stage));
   // }
 
-  // ── PLACE CONTAINER ─────────────────────────────────────────────────────────
+  //      PLACE CONTAINER                                                                                                                   
   {
     auto place = std::make_unique<mtc::SerialContainer>("place " + cube.name);
     task.properties().exposeTo(place->properties(), { "eef", "group", "ik_frame" });
@@ -439,7 +435,6 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
       
       if (!same_layer_placed.empty()) {
         stage->allowCollisions(cube.name, same_layer_placed, true);
-        // Also allow gripper vs same-layer placed cubes
         stage->allowCollisions(same_layer_placed,
           task.getRobotModel()
             ->getJointModelGroup(HAND_GROUP)
@@ -448,7 +443,7 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
       }
       place->insert(std::move(stage));
     }
-    // 1. Lower — Cartesian descent straight down to place position
+    // Lower
     {
       auto stage = std::make_unique<mtc::stages::MoveRelative>("lower", cartesian_planner);
       stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
@@ -462,7 +457,7 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
       place->insert(std::move(stage));
     }
 
-    // 2. Open gripper
+    // Open gripper
     {
       auto stage = std::make_unique<mtc::stages::MoveTo>("open gripper", interpolation_planner);
       stage->setGroup(HAND_GROUP);
@@ -472,10 +467,6 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
 
     task.add(std::move(place));
   }
-
-  // NOTE: return home is intentionally NOT part of this task.
-  // It is run as a separate best-effort task after each successful place
-  // via tryReturnHome(), so a failed home doesn't invalidate a placed cube.
 
   return task;
 }
@@ -517,9 +508,6 @@ bool MTCPyramidNode::runPickAndPlace(const CubeInfo& cube)
     return false;
   }
 
-  // Success — manually detach the cube from the gripper.
-  // addPlacedObject() (called from run()) will then replace it with a clean
-  // cube_N_placed at the intended target.
   moveit_msgs::msg::AttachedCollisionObject detach;
   detach.object.id = cube.name;
   detach.object.operation = moveit_msgs::msg::CollisionObject::REMOVE;
@@ -553,8 +541,6 @@ bool MTCPyramidNode::tryReturnHome()
     home_task.add(std::move(stage));
   }
 
-  // Optional retreat — straight up. Small range so it can succeed even in
-  // cramped post-place poses.
   {
     auto stage = std::make_unique<mtc::stages::MoveRelative>("retreat", cartesian_planner);
     stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
@@ -636,7 +622,6 @@ void MTCPyramidNode::run()
       const auto& p = detected_poses->poses[i];
       auto [px, py, layer] = place_positions[i];
 
-      // Extract yaw from the published quaternion
       tf2::Quaternion q(p.orientation.x, p.orientation.y,
                         p.orientation.z, p.orientation.w);
       double roll, pitch, yaw;
@@ -665,8 +650,6 @@ void MTCPyramidNode::run()
       removePickObject(cube.name);
     }
 
-    // Best-effort return home — failure here doesn't invalidate the placed cube.
-    // Next iteration's CurrentState will pick up from wherever the arm ended up.
     if (!tryReturnHome())
       RCLCPP_WARN(LOGGER, "Could not return home after %s — continuing from current pose",
                   cube.name.c_str());
