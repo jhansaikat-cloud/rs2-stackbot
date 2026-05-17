@@ -46,6 +46,19 @@ qtcreator-*
 
 # Emacs
 .#*
+# ROS2 / Colcon
+install/
+log/
+.colcon/
+
+# Python cache
+__pycache__/
+
+# VSCode
+.vscode/
+
+# Swap/temp files
+*.swp
 
 # Catkin custom files
 CATKIN_IGNORE
