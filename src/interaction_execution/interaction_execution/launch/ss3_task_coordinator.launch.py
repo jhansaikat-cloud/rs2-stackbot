@@ -5,8 +5,8 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='interaction_execution',
-            executable='task_manager',
-            name='task_manager',
+            executable='ss3_task_coordinator',
+	    name='ss3_task_coordinator',
             output='screen'
         )
     ])

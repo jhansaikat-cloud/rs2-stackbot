@@ -22,11 +22,11 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
-add_executable(task_manager src/task_manager.cpp)
-ament_target_dependencies(task_manager rclcpp std_msgs geometry_msgs)
+add_executable(ss3_task_coordinator src/ss3_task_coordinator.cpp)
+ament_target_dependencies(ss3_task_coordinator rclcpp std_msgs geometry_msgs)
 
 install(TARGETS
-  task_manager
+  ss3_task_coordinator
   DESTINATION lib/${PROJECT_NAME}
 )
 install(DIRECTORY
