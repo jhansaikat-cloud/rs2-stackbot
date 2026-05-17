@@ -38,6 +38,7 @@ private:
 
   bool objects_received_ = false;
   bool labels_received_ = false;
+  bool task_active_ = false;
 
   void detectedObjectsCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg)
   {
@@ -57,8 +58,14 @@ private:
 
   void startCallback(const std_msgs::msg::Bool::SharedPtr msg)
   {
-    if (!msg->data)
-      return;
+	if (!msg->data)
+	  return;
+
+	if (task_active_)
+	{
+	  RCLCPP_WARN(this->get_logger(), "Task already active. Ignoring START.");
+	  return;
+	}
 
     RCLCPP_INFO(this->get_logger(), "Client START received.");
 
