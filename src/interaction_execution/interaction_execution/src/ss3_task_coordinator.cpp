@@ -1,224 +1,182 @@
 #include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/bool.hpp"
+#include "std_msgs/msg/string.hpp"
+#include "geometry_msgs/msg/pose_array.hpp"
 
-class TaskManager : public rclcpp::Node
+#include <vector>
+#include <string>
+#include <sstream>
+#include <algorithm>
+#include <cmath>
+
+class SS3TaskCoordinator : public rclcpp::Node
 {
 public:
-  TaskManager() : Node("task_manager")
+  SS3TaskCoordinator() : Node("ss3_task_coordinator")
   {
+    detected_objects_sub_ = this->create_subscription<geometry_msgs::msg::PoseArray>(
+      "/detected_objects", 10,
+      std::bind(&SS3TaskCoordinator::detectedObjectsCallback, this, std::placeholders::_1));
+
+    object_labels_sub_ = this->create_subscription<std_msgs::msg::String>(
+      "/object_labels", 10,
+      std::bind(&SS3TaskCoordinator::objectLabelsCallback, this, std::placeholders::_1));
+
     start_sub_ = this->create_subscription<std_msgs::msg::Bool>(
-      "/start_task", 10,
-      std::bind(&TaskManager::startCallback, this, std::placeholders::_1));
+      "/client/start", 10,
+      std::bind(&SS3TaskCoordinator::startCallback, this, std::placeholders::_1));
 
-    execution_status_sub_ = this->create_subscription<std_msgs::msg::String>(
-      "/execution_status", 10,
-      std::bind(&TaskManager::executionStatusCallback, this, std::placeholders::_1));
+    ordered_objects_pub_ = this->create_publisher<geometry_msgs::msg::PoseArray>(
+      "/ordered_detected_objects", 10);
 
-    gripper_feedback_sub_ = this->create_subscription<std_msgs::msg::String>(
-      "/gripper_feedback", 10,
-      std::bind(&TaskManager::gripperFeedbackCallback, this, std::placeholders::_1));
-
-    pick_place_pub_ = this->create_publisher<std_msgs::msg::String>("/pick_place_request", 10);
-    gripper_command_pub_ = this->create_publisher<std_msgs::msg::String>("/gripper_command", 10);
-    task_status_pub_ = this->create_publisher<std_msgs::msg::String>("/task_status", 10);
-
-    current_state_ = "IDLE";
-    retry_count_ = 0;
-    max_retries_ = 2;
-    
-    total_retries_ = 0;
-    completed_steps_ = 0;
-
-    publishStatus(current_state_);
-
-    RCLCPP_INFO(this->get_logger(), "SS3 Task Manager with retry logic ready.");
+    RCLCPP_INFO(this->get_logger(), "SS3 Task Coordinator ready. Waiting for SS1 data and /client/start...");
   }
 
 private:
-  std::string current_state_;
-  int retry_count_;
-  int max_retries_;
-  
-  int total_retries_;
-  int completed_steps_;
+  geometry_msgs::msg::PoseArray latest_objects_;
+  std::vector<std::string> latest_labels_;
+
+  bool objects_received_ = false;
+  bool labels_received_ = false;
+
+  void detectedObjectsCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg)
+  {
+    latest_objects_ = *msg;
+    objects_received_ = true;
+
+    RCLCPP_INFO(this->get_logger(), "Received %zu detected object poses.", latest_objects_.poses.size());
+  }
+
+  void objectLabelsCallback(const std_msgs::msg::String::SharedPtr msg)
+  {
+    latest_labels_ = splitLabels(msg->data);
+    labels_received_ = true;
+
+    RCLCPP_INFO(this->get_logger(), "Received object labels: %s", msg->data.c_str());
+  }
 
   void startCallback(const std_msgs::msg::Bool::SharedPtr msg)
   {
-    if (msg->data && current_state_ == "IDLE")
+    if (!msg->data)
+      return;
+
+    RCLCPP_INFO(this->get_logger(), "Client START received.");
+
+    if (!objects_received_ || !labels_received_)
     {
-      RCLCPP_INFO(this->get_logger(), "Start command received.");
-      transitionTo("PICK_CUBE_1");
+      RCLCPP_WARN(this->get_logger(), "Cannot start: waiting for detected objects and labels.");
+      return;
     }
+
+    if (latest_objects_.poses.size() != latest_labels_.size())
+    {
+      RCLCPP_ERROR(this->get_logger(), "Pose count and label count mismatch.");
+      return;
+    }
+
+    auto ordered_msg = generateOrderedPoseArray();
+    ordered_objects_pub_->publish(ordered_msg);
+
+    RCLCPP_INFO(this->get_logger(), "Published ordered detected objects to SS2.");
   }
 
-  void executionStatusCallback(const std_msgs::msg::String::SharedPtr msg)
+  std::vector<std::string> splitLabels(const std::string &label_string)
   {
-    RCLCPP_INFO(this->get_logger(), "Execution status received: %s", msg->data.c_str());
+    std::vector<std::string> labels;
+    std::stringstream ss(label_string);
+    std::string label;
 
-    if (msg->data == "DONE")
+    while (std::getline(ss, label, ','))
     {
-      retry_count_ = 0;
-      advanceState();
+      label.erase(remove(label.begin(), label.end(), ' '), label.end());
+      labels.push_back(label);
     }
-    else if (msg->data == "FAILED")
-    {
-      handleFailure("MOTION_FAILED");
-    }
+
+    return labels;
   }
 
-  void gripperFeedbackCallback(const std_msgs::msg::String::SharedPtr msg)
+  double planarDistance(const geometry_msgs::msg::Pose &pose)
   {
-    RCLCPP_INFO(this->get_logger(), "Gripper feedback received: %s", msg->data.c_str());
-
-    if (msg->data == "GRASP_OK")
-    {
-      retry_count_ = 0;
-      publishStatus("GRASP_VERIFIED");
-    }
-    else if (msg->data == "GRASP_FAILED")
-    {
-      handleFailure("GRASP_FAILED");
-    }
+    return std::sqrt(
+      pose.position.x * pose.position.x +
+      pose.position.y * pose.position.y);
   }
 
-  void handleFailure(const std::string &failure_type)
+  geometry_msgs::msg::PoseArray generateOrderedPoseArray()
   {
-    retry_count_++;
-    total_retries_++;
-    RCLCPP_WARN(this->get_logger(),
-      "Failure detected: %s | Retry %d/%d",
-      failure_type.c_str(),
-      retry_count_,
-      max_retries_);
+    geometry_msgs::msg::PoseArray ordered_msg;
+    ordered_msg.header = latest_objects_.header;
 
-    if (retry_count_ <= max_retries_)
+    std::vector<size_t> red_indices;
+    std::vector<size_t> blue_indices;
+    std::vector<size_t> yellow_indices;
+
+    for (size_t i = 0; i < latest_labels_.size(); ++i)
     {
-      publishStatus("RETRYING");
-
-      RCLCPP_INFO(this->get_logger(),
-        "Retrying current state: %s",
-        current_state_.c_str());
-
-      transitionTo(current_state_);
+      if (latest_labels_[i] == "red")
+        red_indices.push_back(i);
+      else if (latest_labels_[i] == "blue")
+        blue_indices.push_back(i);
+      else if (latest_labels_[i] == "yellow")
+        yellow_indices.push_back(i);
     }
-    else
-    {
-      publishStatus("TASK_FAILED");
 
-      RCLCPP_ERROR(this->get_logger(),
-        "Retry limit exceeded. Task failed.");
-    }
+    sortByNearest(red_indices);
+    sortByNearest(blue_indices);
+    sortByNearest(yellow_indices);
+
+	RCLCPP_INFO(this->get_logger(), "Ordered sequence for SS2:");
+
+	appendPoses(ordered_msg, red_indices, "red/base");
+	appendPoses(ordered_msg, blue_indices, "blue/second");
+	appendPoses(ordered_msg, yellow_indices, "yellow/top");
+
+	RCLCPP_INFO(this->get_logger(), "Ordering complete: red base, blue second layer, yellow top.");
+
+    return ordered_msg;
   }
 
-  void transitionTo(const std::string &new_state)
+  void sortByNearest(std::vector<size_t> &indices)
   {
-    current_state_ = new_state;
-
-    publishStatus(current_state_);
-
-    if (current_state_ == "PICK_CUBE_1")
-    {
-      sendPickPlaceRequest("PICK_CUBE_1");
-      sendGripperCommand("CLOSE");
-    }
-    else if (current_state_ == "PLACE_CUBE_1")
-    {
-      sendPickPlaceRequest("PLACE_CUBE_1");
-      sendGripperCommand("OPEN");
-    }
-    else if (current_state_ == "PICK_CUBE_2")
-    {
-      sendPickPlaceRequest("PICK_CUBE_2");
-      sendGripperCommand("CLOSE");
-    }
-    else if (current_state_ == "PLACE_CUBE_2")
-    {
-      sendPickPlaceRequest("PLACE_CUBE_2");
-      sendGripperCommand("OPEN");
-    }
-    else if (current_state_ == "COMPLETE")
-    {
-      publishStatus("TASK_COMPLETE");
-
-      RCLCPP_INFO(this->get_logger(),
-        "Task completed successfully.");
-    }
+    std::sort(indices.begin(), indices.end(),
+      [this](size_t a, size_t b)
+      {
+        return planarDistance(latest_objects_.poses[a]) <
+               planarDistance(latest_objects_.poses[b]);
+      });
   }
 
-  void advanceState()
+void appendPoses(
+  geometry_msgs::msg::PoseArray &msg,
+  const std::vector<size_t> &indices,
+  const std::string &role)
+{
+  for (size_t index : indices)
   {
-	completed_steps_++;
-
-	RCLCPP_INFO(this->get_logger(),
-	  "Completed steps: %d",
-	  completed_steps_);
-	  
-    if (current_state_ == "PICK_CUBE_1")
-      transitionTo("PLACE_CUBE_1");
-
-    else if (current_state_ == "PLACE_CUBE_1")
-      transitionTo("PICK_CUBE_2");
-
-    else if (current_state_ == "PICK_CUBE_2")
-      transitionTo("PLACE_CUBE_2");
-
-    else if (current_state_ == "PLACE_CUBE_2")
-      transitionTo("COMPLETE");
-  }
-
-  void sendPickPlaceRequest(const std::string &request)
-  {
-    auto msg = std_msgs::msg::String();
-    msg.data = request;
-
-    pick_place_pub_->publish(msg);
+    const auto &pose = latest_objects_.poses[index];
+    msg.poses.push_back(pose);
 
     RCLCPP_INFO(this->get_logger(),
-      "Published pick/place request: %s",
-      request.c_str());
+      "Added %s | x=%.3f, y=%.3f, z=%.3f, distance=%.3f",
+      role.c_str(),
+      pose.position.x,
+      pose.position.y,
+      pose.position.z,
+      planarDistance(pose));
   }
+}
 
-  void sendGripperCommand(const std::string &command)
-  {
-    auto msg = std_msgs::msg::String();
-    msg.data = command;
-
-    gripper_command_pub_->publish(msg);
-
-    RCLCPP_INFO(this->get_logger(),
-      "Published gripper command: %s",
-      command.c_str());
-  }
-
-  void publishStatus(const std::string &status)
-  {
-    auto msg = std_msgs::msg::String();
-    msg.data = status;
-
-    task_status_pub_->publish(msg);
-
-    RCLCPP_INFO(this->get_logger(),
-      "Task status: %s",
-      status.c_str());
-  }
-
+  rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr detected_objects_sub_;
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr object_labels_sub_;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr start_sub_;
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr execution_status_sub_;
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr gripper_feedback_sub_;
 
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pick_place_pub_;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr gripper_command_pub_;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr task_status_pub_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr ordered_objects_pub_;
 };
 
 int main(int argc, char **argv)
 {
   rclcpp::init(argc, argv);
-
-  rclcpp::spin(std::make_shared<TaskManager>());
-
+  rclcpp::spin(std::make_shared<SS3TaskCoordinator>());
   rclcpp::shutdown();
-
   return 0;
 }
