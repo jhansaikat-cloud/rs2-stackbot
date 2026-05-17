@@ -15,7 +15,7 @@ public:
   SS3TaskCoordinator() : Node("ss3_task_coordinator")
   {
     detected_objects_sub_ = this->create_subscription<geometry_msgs::msg::PoseArray>(
-      "/detected_objects", 10,
+      "/raw_detected_objects", 10,
       std::bind(&SS3TaskCoordinator::detectedObjectsCallback, this, std::placeholders::_1));
 
     object_labels_sub_ = this->create_subscription<std_msgs::msg::String>(
