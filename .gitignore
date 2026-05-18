@@ -62,3 +62,4 @@ __pycache__/
 
 # Catkin custom files
 CATKIN_IGNORE
+src/ur_onrobot/
