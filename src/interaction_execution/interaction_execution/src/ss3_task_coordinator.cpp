@@ -2,6 +2,7 @@
 #include "std_msgs/msg/bool.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
+#include <moveit/move_group_interface/move_group_interface.h>
 
 #include <vector>
 #include <string>
@@ -39,6 +40,42 @@ private:
   bool objects_received_ = false;
   bool labels_received_ = false;
   bool task_active_ = false;
+  bool moveToSearchPosition()
+{
+  RCLCPP_INFO(this->get_logger(),
+              "Moving UR3e to search position...");
+
+  moveit::planning_interface::MoveGroupInterface move_group(
+    shared_from_this(),
+    "ur_onrobot_manipulator");
+
+  std::vector<double> search_joint_values =
+  {
+    -1.57,
+    -1.20,
+    -1.80,
+    -1.50,
+     1.57,
+     0.00
+  };
+
+  move_group.setJointValueTarget(search_joint_values);
+  move_group.setPlanningTime(10.0);
+
+  auto result = move_group.move();
+
+  if (result == moveit::core::MoveItErrorCode::SUCCESS)
+  {
+    RCLCPP_INFO(this->get_logger(),
+                "Search position reached.");
+    return true;
+  }
+
+  RCLCPP_ERROR(this->get_logger(),
+               "Failed to reach search position.");
+
+  return false;
+}
 
   void detectedObjectsCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg)
   {
@@ -67,13 +104,21 @@ private:
 	  return;
 	}
 
-    RCLCPP_INFO(this->get_logger(), "Client START received.");
+	RCLCPP_INFO(this->get_logger(), "Client START received.");
 
-    if (!objects_received_ || !labels_received_)
-    {
-      RCLCPP_WARN(this->get_logger(), "Cannot start: waiting for detected objects and labels.");
-      return;
-    }
+	if (!moveToSearchPosition())
+	{
+	  RCLCPP_ERROR(this->get_logger(),
+		       "Aborting task: search position failed.");
+	  return;
+	}
+
+	if (!objects_received_ || !labels_received_)
+	{
+	  RCLCPP_WARN(this->get_logger(),
+		      "Cannot start: waiting for detected objects and labels.");
+	  return;
+	}
 
     if (latest_objects_.poses.size() != latest_labels_.size())
     {

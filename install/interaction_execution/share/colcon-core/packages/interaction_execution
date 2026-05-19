@@ -1,1 +1,1 @@
-geometry_msgs:rclcpp:std_msgs
+geometry_msgs:moveit_core:moveit_ros_planning_interface:rclcpp:std_msgs

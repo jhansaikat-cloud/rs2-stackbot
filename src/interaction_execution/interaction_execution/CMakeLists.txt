@@ -10,6 +10,8 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(moveit_ros_planning_interface REQUIRED)
+find_package(moveit_core REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -23,7 +25,13 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 add_executable(ss3_task_coordinator src/ss3_task_coordinator.cpp)
-ament_target_dependencies(ss3_task_coordinator rclcpp std_msgs geometry_msgs)
+ament_target_dependencies(ss3_task_coordinator
+  rclcpp
+  std_msgs
+  geometry_msgs
+  moveit_ros_planning_interface
+  moveit_core
+)
 
 install(TARGETS
   ss3_task_coordinator
