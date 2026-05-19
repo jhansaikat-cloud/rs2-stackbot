@@ -117,7 +117,7 @@ void MTCPyramidNode::clearScene()
 {
   moveit::planning_interface::PlanningSceneInterface psi;
   std::vector<std::string> to_remove = {
-    "table",
+    "table", "back_trolley",
     "cube_1", "cube_2", "cube_3", "cube_4", "cube_5", "cube_6",
     "cube_1_placed", "cube_2_placed", "cube_3_placed",
     "cube_4_placed", "cube_5_placed", "cube_6_placed"
@@ -162,21 +162,38 @@ void MTCPyramidNode::setupPlanningScene(const std::vector<CubeInfo>& cubes)
     RCLCPP_INFO(LOGGER, "Added collision object: %s at (%.3f, %.3f)",
                 cube.name.c_str(), cube.pick_x, cube.pick_y);
   }
-
+  // Workspace
   moveit_msgs::msg::CollisionObject table;
   table.header.frame_id = FIXED_FRAME;
   table.id = "table";
   shape_msgs::msg::SolidPrimitive prim;
   prim.type = prim.BOX;
-  prim.dimensions = { 2.0, 2.0, 0.02 }; 
+  prim.dimensions = { 0.6, 0.6, 0.02 }; 
   geometry_msgs::msg::Pose tpose;
   tpose.orientation.w = 1.0;
-  tpose.position.z = -0.02;  
+  tpose.position.z = SURFACE_Z - 0.011;
+  tpose.position.y = 0.38;
   table.primitives.push_back(prim);
   table.primitive_poses.push_back(tpose);
   table.operation = table.ADD;
   psi.applyCollisionObject(table);
 
+  // Back trolley
+  moveit_msgs::msg::CollisionObject back_trolley;
+  back_trolley.header.frame_id = FIXED_FRAME;
+  back_trolley.id = "back_trolley";
+  shape_msgs::msg::SolidPrimitive back_prim;
+  back_prim.type = prim.BOX;
+  back_prim.dimensions = { 0.6, 0.2, 0.02 }; 
+  geometry_msgs::msg::Pose back_pose;
+  back_pose.orientation.w = 1.0;
+  back_pose.position.z = SURFACE_Z - 0.011;
+  back_pose.position.y = -0.18;
+  back_trolley.primitives.push_back(back_prim);
+  back_trolley.primitive_poses.push_back(back_pose);
+  back_trolley.operation = back_trolley.ADD;
+  psi.applyCollisionObject(back_trolley);
+  
   RCLCPP_INFO(LOGGER, "Planning scene ready.");
 }
 

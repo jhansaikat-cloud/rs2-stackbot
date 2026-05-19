@@ -152,19 +152,38 @@ void RetrievalNode::setupPlanningScene()
 {
   moveit::planning_interface::PlanningSceneInterface psi;
 
+  // Workspace
   moveit_msgs::msg::CollisionObject table;
   table.header.frame_id = FIXED_FRAME;
   table.id = "table";
   shape_msgs::msg::SolidPrimitive prim;
   prim.type = prim.BOX;
-  prim.dimensions = { 2.0, 2.0, 0.02 };
+  prim.dimensions = { 0.6, 0.6, 0.02 }; 
   geometry_msgs::msg::Pose tpose;
   tpose.orientation.w = 1.0;
-  tpose.position.z    = -0.02;
+  tpose.position.z = SURFACE_Z - 0.011;
+  tpose.position.y = 0.38;
   table.primitives.push_back(prim);
   table.primitive_poses.push_back(tpose);
   table.operation = table.ADD;
   psi.applyCollisionObject(table);
+
+  // Back trolley
+  moveit_msgs::msg::CollisionObject back_trolley;
+  back_trolley.header.frame_id = FIXED_FRAME;
+  back_trolley.id = "back_trolley";
+  shape_msgs::msg::SolidPrimitive back_prim;
+  back_prim.type = prim.BOX;
+  back_prim.dimensions = { 0.6, 0.2, 0.02 }; 
+  geometry_msgs::msg::Pose back_pose;
+  back_pose.orientation.w = 1.0;
+  back_pose.position.z = SURFACE_Z - 0.011;
+  back_pose.position.y = -0.18;
+  back_trolley.primitives.push_back(back_prim);
+  back_trolley.primitive_poses.push_back(back_pose);
+  back_trolley.operation = back_trolley.ADD;
+  psi.applyCollisionObject(back_trolley);
+  
 
   for (const auto& state : cube_states_)
   {
