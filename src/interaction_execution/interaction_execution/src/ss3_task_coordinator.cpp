@@ -142,9 +142,9 @@ private:
     latest_objects_ = *msg;
     objects_received_ = true;
 
-    RCLCPP_INFO(this->get_logger(),
-                "Received %zu raw detected object poses.",
-                latest_objects_.poses.size());
+    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+                     "Received %zu raw detected object poses.",
+                     latest_objects_.poses.size());
 
     tryPublishFullSequence();
   }
@@ -154,10 +154,9 @@ private:
     latest_labels_ = splitLabels(msg->data);
     labels_received_ = true;
 
-    RCLCPP_INFO(this->get_logger(),
-                "Received object labels: %s",
-                msg->data.c_str());
-
+    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+                     "Received object labels: %s",
+                     msg->data.c_str());
     tryPublishFullSequence();
   }
 
