@@ -10,25 +10,26 @@ In src/ur_onrobot/ur_onrobot_moveit_config/config/controllers.yaml
 
 add at the end
 
-trajectory_execution:
-  allowed_execution_duration_scaling: 2.0
-  execution_duration_monitoring: false
-  allowed_start_tolerance: 0.05
+    trajectory_execution:
+      allowed_execution_duration_scaling: 2.0
+      execution_duration_monitoring: false
+      allowed_start_tolerance: 0.05
 
 In src/ur_onrobot/ur_onrobot_moveit_config/config/ompl_planning.yaml
 add at the end
-ur_onrobot_manipulator:
-  planner_configs:
-    - SBLkConfigDefault
-    - ESTkConfigDefault
-    - LBKPIECEkConfigDefault
-    - BKPIECEkConfigDefault
-    - KPIECEkConfigDefault
-    - RRTkConfigDefault
-    - RRTConnectkConfigDefault
-    - RRTstarkConfigDefault
-    - TRRTkConfigDefault
-    - PRMkConfigDefault
-    - PRMstarkConfigDefault
-  longest_valid_segment_fraction: 0.001
-  enforce_joint_model_state_space: true
+
+    ur_onrobot_manipulator:
+      planner_configs:
+        - SBLkConfigDefault
+        - ESTkConfigDefault
+        - LBKPIECEkConfigDefault
+        - BKPIECEkConfigDefault
+        - KPIECEkConfigDefault
+        - RRTkConfigDefault
+        - RRTConnectkConfigDefault
+        - RRTstarkConfigDefault
+        - TRRTkConfigDefault
+        - PRMkConfigDefault
+        - PRMstarkConfigDefault
+      longest_valid_segment_fraction: 0.001
+      enforce_joint_model_state_space: true
