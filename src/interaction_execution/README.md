@@ -1,4 +1,4 @@
-# SS3 – Interaction & Execution Coordination Subsystem
+# SS3 – Interaction & Execution Subsystem
 
 ## Overview
 
