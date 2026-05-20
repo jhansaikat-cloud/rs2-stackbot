@@ -65,16 +65,15 @@ private:
       shared_from_this(),
       "ur_onrobot_manipulator");
 
-    // TODO: Replace with real safe camera-search joint values from /joint_states.
-    std::vector<double> search_joint_values =
-    {
-      -1.57,
-      -1.20,
-      -1.80,
-      -1.50,
-       1.57,
-       0.00
-    };
+	std::vector<double> search_joint_values =
+	{
+	  -1.3379457632647913,   // shoulder_pan_joint
+	  -1.676735063592428,    // shoulder_lift_joint
+	  -0.06869813799858093,  // elbow_joint
+	  -2.7657791576781214,   // wrist_1_joint
+	   1.5695604085922241,   // wrist_2_joint
+	   0.19399519264698029   // wrist_3_joint
+	};
 
     move_group.setJointValueTarget(search_joint_values);
     move_group.setPlanningTime(10.0);
