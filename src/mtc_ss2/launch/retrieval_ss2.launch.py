@@ -145,7 +145,7 @@ def launch_setup(context, *args, **kwargs):
     ]
 
     mtc_demo_node = Node(
-        package="retrieval_ss2", #changed to name
+        package="mtc_ss2", #changed to name
         executable="retrieval_ss2", #changed to name
         name="retrieval_ss2", #changed to name
         output="screen",

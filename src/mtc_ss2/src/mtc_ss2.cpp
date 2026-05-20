@@ -33,11 +33,11 @@ static const std::string FIXED_FRAME = "base_link";
 //      CUBE DIMENSIONS                                                                                                                       
 static constexpr double CUBE_SIZE       = 0.050;
 static constexpr double PLACE_CLEARANCE = 0.005;
-static constexpr double SURFACE_Z       = 0.001;
+static constexpr double SURFACE_Z       = 0.028;
 
 //      PYRAMID LAYOUT                                                                                                                         
 static constexpr double PYRAMID_X = 0.012;
-static constexpr double PYRAMID_Y = 0.320;
+static constexpr double PYRAMID_Y = 0.340;
 static constexpr double STEP      = CUBE_SIZE + 0.005;
 
 //      GRIPPER DOWN ORIENTATION (measured, 180 deg around world Y)                               
@@ -193,7 +193,30 @@ void MTCPyramidNode::setupPlanningScene(const std::vector<CubeInfo>& cubes)
   back_trolley.primitive_poses.push_back(back_pose);
   back_trolley.operation = back_trolley.ADD;
   psi.applyCollisionObject(back_trolley);
-  
+
+  //Camera
+  moveit_msgs::msg::AttachedCollisionObject camera;
+  camera.link_name = "tool0";  // attach to this link
+  camera.object.id = "realsense_camera";
+  camera.object.header.frame_id = "tool0";
+
+  shape_msgs::msg::SolidPrimitive camera_shape;
+  camera_shape.type = shape_msgs::msg::SolidPrimitive::BOX;
+
+  camera_shape.dimensions = { 0.05, 0.04, 0.01 };
+  geometry_msgs::msg::Pose camera_pose;
+  camera_pose.orientation.x = 1.0;
+  camera_pose.orientation.y = 0.0;
+  camera_pose.orientation.z = 0.0;
+  camera_pose.orientation.w = 0.0;
+  camera_pose.position.y = -0.05;
+  camera.object.primitives.push_back(camera_shape);
+  camera.object.primitive_poses.push_back(camera_pose);
+  camera.object.operation = moveit_msgs::msg::CollisionObject::ADD;
+
+  camera.touch_links = { "tool0", "flange", "wrist_3_link", "wrist_2_link", "onrobot_base_link" };
+  psi.applyAttachedCollisionObject(camera);
+
   RCLCPP_INFO(LOGGER, "Planning scene ready.");
 }
 
@@ -252,13 +275,20 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
   task.setProperty("group",    ARM_GROUP);
   task.setProperty("eef",      HAND_GROUP);
   task.setProperty("ik_frame", HAND_FRAME);
+  task.setProperty("max_velocity_scaling_factor", 0.2);
+  task.setProperty("max_acceleration_scaling_factor", 0.2);
+
 
   auto sampling_planner      = std::make_shared<mtc::solvers::PipelinePlanner>(node_);
+  sampling_planner->setProperty("longest_valid_segment_fraction", 0.001);
   auto interpolation_planner = std::make_shared<mtc::solvers::JointInterpolationPlanner>();
+  interpolation_planner->setMaxVelocityScalingFactor(0.1);
+  interpolation_planner->setMaxAccelerationScalingFactor(0.1);
   auto cartesian_planner     = std::make_shared<mtc::solvers::CartesianPath>();
-  cartesian_planner->setMaxVelocityScalingFactor(1.0);
-  cartesian_planner->setMaxAccelerationScalingFactor(1.0);
-  cartesian_planner->setStepSize(0.002);
+  cartesian_planner->setMaxVelocityScalingFactor(0.3);
+  cartesian_planner->setMaxAccelerationScalingFactor(0.3);
+  cartesian_planner->setStepSize(0.001);
+  cartesian_planner->setJumpThreshold(2.0);  // reject if any joint jumps more than 2.0 rad;
 
   //      CURRENT STATE                                                                                                                       
   mtc::Stage* current_state_ptr = nullptr;
@@ -474,6 +504,21 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
       place->insert(std::move(stage));
     }
 
+    {
+      auto stage = std::make_unique<mtc::stages::ModifyPlanningScene>(
+        "disallow finger forearm collision");
+      stage->allowCollisions(
+        std::vector<std::string>{
+          "left_inner_finger", "right_inner_finger",
+          "left_finger_tip", "right_finger_tip"
+        },
+        std::vector<std::string>{
+          "forearm_link", "upper_arm_link"
+        },
+        false);
+      place->insert(std::move(stage));
+    }
+
     // Open gripper
     {
       auto stage = std::make_unique<mtc::stages::MoveTo>("open gripper", interpolation_planner);
@@ -551,7 +596,8 @@ bool MTCPyramidNode::tryReturnHome()
   auto cartesian_planner = std::make_shared<mtc::solvers::CartesianPath>();
   cartesian_planner->setMaxVelocityScalingFactor(1.0);
   cartesian_planner->setMaxAccelerationScalingFactor(1.0);
-  cartesian_planner->setStepSize(0.002);
+  cartesian_planner->setStepSize(0.001);
+  cartesian_planner->setJumpThreshold(2.0);  // reject if any joint jumps more than 2.0 rad;
 
   {
     auto stage = std::make_unique<mtc::stages::CurrentState>("current");
@@ -601,6 +647,7 @@ void MTCPyramidNode::run()
 {
   clearScene();
 
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
   std::vector<CubeInfo> cubes;
   geometry_msgs::msg::PoseArray::SharedPtr detected_poses = nullptr;
 
@@ -611,9 +658,14 @@ void MTCPyramidNode::run()
     [&detected_poses](geometry_msgs::msg::PoseArray::SharedPtr msg)
     { detected_poses = msg; });
 
+  // Wait with timeout, fall back to hardcoded if no SS3 data
   auto deadline = node_->now() + rclcpp::Duration::from_seconds(5.0);
   while (rclcpp::ok() && node_->now() < deadline && detected_poses == nullptr)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  // Wait indefinitely until SS3 publishes (no fallback)
+  // while (rclcpp::ok() && detected_poses == nullptr)
+  //   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
   static const std::array<std::tuple<double, double, int>, 6> place_positions = {{
     { PYRAMID_X + STEP,       PYRAMID_Y, 1 },

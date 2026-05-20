@@ -11,7 +11,7 @@ static constexpr double SURFACE_Z       = 0.001;
 
 //    PYRAMID LAYOUT                                                             
 static constexpr double PYRAMID_X = 0.012;
-static constexpr double PYRAMID_Y = 0.320;
+static constexpr double PYRAMID_Y = 0.340;
 static constexpr double STEP      = CUBE_SIZE + 0.005;
 
 //    TCP OFFSET                                                                 
@@ -70,9 +70,9 @@ struct StagingSlot
 inline std::vector<StagingSlot> getStagingSlots()
 {
   return {
-    { 0.300, 0.150, false },
-    { 0.300, 0.250, false },
-    { 0.300, 0.350, false },
+    { 0.200, 0.200, false },
+    { 0.200, 0.270, false },
+    { 0.200, 0.350, false },
   };
 }
 

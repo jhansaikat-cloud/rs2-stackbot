@@ -381,7 +381,7 @@ mtc::Task RetrievalNode::createPickTask(
     {
       auto stage = std::make_unique<mtc::stages::MoveRelative>("lift", cartesian_planner);
       stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
-      stage->setMinMaxDistance(0.15, 0.20);
+      stage->setMinMaxDistance(0.0, 0.20);
       stage->setIKFrame(HAND_FRAME);
       stage->properties().set("marker_ns", "lift");
       geometry_msgs::msg::Vector3Stamped vec;
