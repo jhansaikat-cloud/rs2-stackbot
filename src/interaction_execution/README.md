@@ -1,4 +1,4 @@
-# SS3 – Interaction & Execution Subsystem
+# SS3 – Interaction & Execution Coordination Subsystem
 
 ## Overview
 
@@ -8,20 +8,16 @@ The subsystem is responsible for:
 
 * Moving the UR3e cobot to a predefined search position for camera-based cube detection
 * Receiving raw cube poses and colour labels from SS1
-* Validating detected cube information
+* Validating all 6 detected cubes before execution
 * Sorting cubes using nearest-first logic
-* Managing staged pyramid construction:
-
-  * Base layer (3 red cubes)
-  * Middle layer (2 yellow cubes)
-  * Top layer (1 blue cube)
+* Generating the final ordered pyramid-building sequence
 * Publishing ordered cube poses to SS2
-* Coordinating stage transitions
 * Supporting targeted cube retrieval after pyramid completion
+* Managing START and RESET workflow
 
 ---
 
-# System Architecture
+# Final System Architecture
 
 ```text
 SS1
@@ -29,8 +25,9 @@ SS1
 /object_labels
         ↓
 SS3
+search-position + validation + ordering
+        ↓
 /detected_objects
-/ss3/current_stage
         ↓
 SS2
 ```
@@ -43,9 +40,9 @@ SS2
 * Implemented fully in C++
 * MoveIt2 integration
 * UR3e search-position movement
-* Stage-based execution coordination
-* Nearest-first cube sorting
-* Layer-wise pyramid construction
+* Full 6-cube validation
+* Nearest-first cube ordering
+* Pyramid-ready pose sequencing
 * Retrieval-ready architecture
 * START/RESET workflow
 * Topic-based subsystem integration
@@ -65,8 +62,8 @@ SS2
 * Ubuntu 22.04
 * ROS2 Humble
 * MoveIt2
+* RViz2
 * colcon
-* rviz2
 
 ---
 
@@ -83,7 +80,9 @@ sudo apt install ros-humble-moveit-ros-planning-interface
 
 ```bash
 cd ~
+
 mkdir -p rs2-stackbot/src
+
 cd rs2-stackbot/src
 
 git clone https://github.com/jhansaikat-cloud/rs2-stackbot.git
@@ -165,122 +164,103 @@ data: true
 
 ---
 
-# SS1 Integration Topics
+# Retrieval Request
 
-| Topic                   | Type                      | Purpose                             |
-| ----------------------- | ------------------------- | ----------------------------------- |
-| `/raw_detected_objects` | `geometry_msgs/PoseArray` | Raw detected cube poses             |
-| `/object_labels`        | `std_msgs/String`         | Colour labels matching pose indices |
-
----
-
-# SS3 Published Topics
-
-| Topic                | Type                      | Purpose                       |
-| -------------------- | ------------------------- | ----------------------------- |
-| `/detected_objects`  | `geometry_msgs/PoseArray` | Ordered cube sequence for SS2 |
-| `/ss3/current_stage` | `std_msgs/String`         | Current execution stage       |
-| `/retrieve_cube`     | `std_msgs/String`         | Retrieval target handoff      |
-
----
-
-# SS2 Required Topics
-
-SS2 must subscribe to:
-
-```text
-/detected_objects
-/ss3/current_stage
-```
-
-SS2 must publish:
-
-```text
-/ss2/execution_status
-```
-
-Supported execution status values:
-
-```text
-BASE_COMPLETE
-MIDDLE_COMPLETE
-TOP_COMPLETE
-TASK_COMPLETE
-```
-
----
-
-# Stage Workflow
-
-## Stage 1 – Search for Base
-
-SS3:
-
-* Moves UR3e to search position
-* Waits for 3 red cubes
-* Sorts nearest-first
-* Publishes base layer poses
-
----
-
-## Stage 2 – Search for Middle Layer
-
-After receiving:
-
-```text
-BASE_COMPLETE
-```
-
-SS3:
-
-* Returns robot to search position
-* Waits for 2 yellow cubes
-* Publishes middle layer poses
-
----
-
-## Stage 3 – Search for Top Layer
-
-After receiving:
-
-```text
-MIDDLE_COMPLETE
-```
-
-SS3:
-
-* Returns robot to search position
-* Waits for 1 blue cube
-* Publishes top layer pose
-
----
-
-## Stage 4 – Retrieval Mode
-
-After receiving:
-
-```text
-TOP_COMPLETE
-```
-
-or
-
-```text
-TASK_COMPLETE
-```
-
-SS3 enters:
-
-```text
-RETRIEVAL_READY
-```
-
-A target cube can then be requested using:
+After pyramid completion:
 
 ```bash
 ros2 topic pub --once /client/retrieve_cube std_msgs/msg/String "
 data: 'cube_2'
 "
+```
+
+SS3 forwards the retrieval request to SS2 using:
+
+```text
+/retrieve_cube
+```
+
+---
+
+# SS1 Integration Topics
+
+| Topic                   | Type                      | Purpose            |
+| ----------------------- | ------------------------- | ------------------ |
+| `/raw_detected_objects` | `geometry_msgs/PoseArray` | Raw cube poses     |
+| `/object_labels`        | `std_msgs/String`         | Cube colour labels |
+
+---
+
+# SS3 Published Topics
+
+| Topic               | Type                      | Purpose                           |
+| ------------------- | ------------------------- | --------------------------------- |
+| `/detected_objects` | `geometry_msgs/PoseArray` | Ordered cube sequence for SS2     |
+| `/retrieve_cube`    | `std_msgs/String`         | Retrieval target forwarded to SS2 |
+
+---
+
+# Detection Validation Logic
+
+SS3 validates the incoming cube data before publishing to SS2.
+
+Validation requirements:
+
+```text
+Total poses = 6
+Total labels = 6
+
+Colour distribution:
+Red    = 3
+Yellow = 2
+Blue   = 1
+```
+
+If validation fails:
+
+* SS3 does NOT publish `/detected_objects`
+* SS2 execution does NOT start
+* SS3 waits for updated perception data from SS1
+
+---
+
+# Ordering Logic
+
+The cubes are grouped by colour and sorted using nearest-first planar distance ordering.
+
+Final pyramid sequence:
+
+| Layer  | Colour | Count |
+| ------ | ------ | ----- |
+| Bottom | Red    | 3     |
+| Middle | Yellow | 2     |
+| Top    | Blue   | 1     |
+
+Published sequence order:
+
+```text
+Red base cubes
+↓
+Yellow middle cubes
+↓
+Blue top cube
+```
+
+---
+
+# Search Position Logic
+
+When `/client/start` is received:
+
+1. SS3 moves UR3e to a predefined search pose
+2. SS1 performs cube detection
+3. SS3 validates the full cube set
+4. SS3 publishes ordered cube poses to SS2
+
+The search position is executed using MoveIt2:
+
+```cpp
+moveToSearchPosition()
 ```
 
 ---
@@ -290,46 +270,79 @@ data: 'cube_2'
 The search position joint values inside:
 
 ```cpp
-moveToSearchPosition()
+std::vector<double> search_joint_values
 ```
 
 must be replaced using real UR3e joint values.
 
-## Procedure
+## Calibration Procedure
 
-1. Move robot to desired camera-search pose using RViz
-2. Read joint values:
+1. Move the robot to the desired camera-search pose in RViz
+2. Read the robot joint values:
 
 ```bash
 ros2 topic echo /joint_states
 ```
 
-3. Replace placeholder values in:
+3. Replace the placeholder joint values in:
 
 ```cpp
-std::vector<double> search_joint_values
+moveToSearchPosition()
 ```
 
 ---
 
 # Known Limitations
 
-* Placeholder search joint values must be calibrated on the real robot
-* SS3 assumes SS1 provides accurate cube labels
+* Placeholder search pose values require calibration on the real robot
+* SS3 assumes SS1 provides accurate colour labels
+* Dynamic re-planning is not implemented
 * Retrieval obstacle-removal sequencing is handled by SS2
-* Dynamic re-planning is not yet implemented
 
 ---
 
 # Troubleshooting
 
-| Problem                    | Cause                        | Solution                             |
-| -------------------------- | ---------------------------- | ------------------------------------ |
-| `robot_description` error  | MoveIt not running           | Launch MoveIt before SS3             |
-| Search position failed     | Invalid joint values         | Recalibrate search pose              |
-| No cube sequence published | Insufficient cube detections | Verify SS1 topics                    |
-| SS2 does not move          | Wrong topic subscription     | Confirm SS2 uses `/detected_objects` |
-| Retrieval ignored          | Pyramid not complete         | Finish pyramid build first           |
+| Problem                    | Likely Cause             | Solution                             |
+| -------------------------- | ------------------------ | ------------------------------------ |
+| `robot_description` error  | MoveIt not running       | Launch MoveIt before SS3             |
+| Search position failed     | Invalid joint values     | Recalibrate search pose              |
+| No cube sequence published | Incomplete detections    | Verify SS1 topics                    |
+| SS2 does not move          | Wrong topic subscription | Confirm SS2 uses `/detected_objects` |
+| Retrieval ignored          | Pyramid not complete     | Complete build before retrieval      |
+
+---
+
+# Final Topic Flow
+
+```text
+/client/start
+        ↓
+SS3 moves robot to search position
+        ↓
+SS1 publishes:
+/raw_detected_objects
+/object_labels
+        ↓
+SS3 validates:
+3 red
+2 yellow
+1 blue
+        ↓
+SS3 nearest-first ordering
+        ↓
+SS3 publishes:
+/detected_objects
+        ↓
+SS2 builds pyramid
+        ↓
+Client sends retrieval request
+        ↓
+SS3 forwards:
+/retrieve_cube
+        ↓
+SS2 performs targeted retrieval
+```
 
 ---
 
