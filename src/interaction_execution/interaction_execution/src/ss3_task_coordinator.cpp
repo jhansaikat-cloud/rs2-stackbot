@@ -33,10 +33,6 @@ public:
       "/client/reset", 10,
       std::bind(&SS3TaskCoordinator::resetCallback, this, std::placeholders::_1));
 
-    ss2_status_sub_ = this->create_subscription<std_msgs::msg::String>(
-      "/ss2/execution_status", 10,
-      std::bind(&SS3TaskCoordinator::ss2StatusCallback, this, std::placeholders::_1));
-
     client_retrieve_sub_ = this->create_subscription<std_msgs::msg::String>(
       "/client/retrieve_cube", 10,
       std::bind(&SS3TaskCoordinator::retrieveCallback, this, std::placeholders::_1));
@@ -44,15 +40,11 @@ public:
     ordered_objects_pub_ = this->create_publisher<geometry_msgs::msg::PoseArray>(
       "/detected_objects", 10);
 
-    stage_pub_ = this->create_publisher<std_msgs::msg::String>(
-      "/ss3/current_stage", 10);
-
     retrieve_pub_ = this->create_publisher<std_msgs::msg::String>(
       "/retrieve_cube", 10);
 
     RCLCPP_INFO(this->get_logger(),
-                "SS3 Task Coordinator ready. Waiting for /client/start...");
-    publishStage(current_stage_);
+                "SS3 ready. Waiting for /client/start.");
   }
 
 private:
@@ -62,19 +54,8 @@ private:
   bool objects_received_ = false;
   bool labels_received_ = false;
   bool task_active_ = false;
+  bool ordered_sequence_published_ = false;
   bool pyramid_complete_ = false;
-
-  // Main stages:
-  // IDLE
-  // SEARCH_FOR_BASE
-  // WAITING_BASE_COMPLETE
-  // SEARCH_FOR_MIDDLE
-  // WAITING_MIDDLE_COMPLETE
-  // SEARCH_FOR_TOP
-  // WAITING_TOP_COMPLETE
-  // PYRAMID_COMPLETE
-  // RETRIEVAL_READY
-  std::string current_stage_ = "IDLE";
 
   bool moveToSearchPosition()
   {
@@ -84,9 +65,7 @@ private:
       shared_from_this(),
       "ur_onrobot_manipulator");
 
-    // IMPORTANT:
-    // Replace these placeholder values with the real safe camera-search pose
-    // collected from /joint_states on the real robot.
+    // TODO: Replace with real safe camera-search joint values from /joint_states.
     std::vector<double> search_joint_values =
     {
       -1.57,
@@ -127,9 +106,8 @@ private:
     RCLCPP_INFO(this->get_logger(), "Client START received.");
 
     task_active_ = true;
+    ordered_sequence_published_ = false;
     pyramid_complete_ = false;
-    current_stage_ = "SEARCH_FOR_BASE";
-    publishStage(current_stage_);
 
     clearPerceptionCache();
 
@@ -137,14 +115,12 @@ private:
     {
       RCLCPP_ERROR(this->get_logger(),
                    "Aborting task: search position failed.");
-      current_stage_ = "ERROR_SEARCH_POSITION";
-      publishStage(current_stage_);
       task_active_ = false;
       return;
     }
 
     RCLCPP_INFO(this->get_logger(),
-                "Waiting for SS1 to detect 3 red cubes for base layer...");
+                "Search position complete. Waiting for SS1 to publish all 6 cube poses and labels.");
   }
 
   void resetCallback(const std_msgs::msg::Bool::SharedPtr msg)
@@ -153,14 +129,13 @@ private:
       return;
 
     task_active_ = false;
+    ordered_sequence_published_ = false;
     pyramid_complete_ = false;
-    current_stage_ = "IDLE";
 
     clearPerceptionCache();
 
     RCLCPP_INFO(this->get_logger(),
                 "SS3 reset complete. Ready for next task.");
-    publishStage(current_stage_);
   }
 
   void rawObjectsCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg)
@@ -172,7 +147,7 @@ private:
                 "Received %zu raw detected object poses.",
                 latest_objects_.poses.size());
 
-    tryProcessCurrentStage();
+    tryPublishFullSequence();
   }
 
   void labelsCallback(const std_msgs::msg::String::SharedPtr msg)
@@ -184,51 +159,11 @@ private:
                 "Received object labels: %s",
                 msg->data.c_str());
 
-    tryProcessCurrentStage();
-  }
-
-  void ss2StatusCallback(const std_msgs::msg::String::SharedPtr msg)
-  {
-    RCLCPP_INFO(this->get_logger(),
-                "SS2 status received: %s",
-                msg->data.c_str());
-
-    if (msg->data == "BASE_COMPLETE" &&
-        current_stage_ == "WAITING_BASE_COMPLETE")
-    {
-      moveToNextSearchStage("SEARCH_FOR_MIDDLE",
-                            "Waiting for SS1 to detect 2 yellow cubes for middle layer...");
-    }
-    else if (msg->data == "MIDDLE_COMPLETE" &&
-             current_stage_ == "WAITING_MIDDLE_COMPLETE")
-    {
-      moveToNextSearchStage("SEARCH_FOR_TOP",
-                            "Waiting for SS1 to detect 1 blue cube for top layer...");
-    }
-    else if ((msg->data == "TOP_COMPLETE" || msg->data == "TASK_COMPLETE") &&
-             current_stage_ == "WAITING_TOP_COMPLETE")
-    {
-      current_stage_ = "PYRAMID_COMPLETE";
-      pyramid_complete_ = true;
-      publishStage(current_stage_);
-
-      RCLCPP_INFO(this->get_logger(),
-                  "Pyramid build complete. Retrieval mode is now available.");
-
-      current_stage_ = "RETRIEVAL_READY";
-      publishStage(current_stage_);
-    }
+    tryPublishFullSequence();
   }
 
   void retrieveCallback(const std_msgs::msg::String::SharedPtr msg)
   {
-    if (!pyramid_complete_)
-    {
-      RCLCPP_WARN(this->get_logger(),
-                  "Retrieval request ignored. Pyramid build is not complete yet.");
-      return;
-    }
-
     auto out = std_msgs::msg::String();
     out.data = msg->data;
 
@@ -239,113 +174,119 @@ private:
                 msg->data.c_str());
   }
 
-  void moveToNextSearchStage(const std::string &next_stage,
-                             const std::string &message)
-  {
-    current_stage_ = next_stage;
-    publishStage(current_stage_);
-
-    clearPerceptionCache();
-
-    if (!moveToSearchPosition())
-    {
-      RCLCPP_ERROR(this->get_logger(),
-                   "Failed to return to search position.");
-      current_stage_ = "ERROR_SEARCH_POSITION";
-      publishStage(current_stage_);
-      task_active_ = false;
-      return;
-    }
-
-    RCLCPP_INFO(this->get_logger(), "%s", message.c_str());
-  }
-
-  void tryProcessCurrentStage()
+  void tryPublishFullSequence()
   {
     if (!task_active_)
+      return;
+
+    if (ordered_sequence_published_)
       return;
 
     if (!objects_received_ || !labels_received_)
       return;
 
-    if (latest_objects_.poses.size() != latest_labels_.size())
+    if (!validateDetections())
+      return;
+
+    geometry_msgs::msg::PoseArray ordered_msg = generateOrderedPoseArray();
+
+    ordered_objects_pub_->publish(ordered_msg);
+
+    ordered_sequence_published_ = true;
+    pyramid_complete_ = true;
+
+    RCLCPP_INFO(this->get_logger(),
+                "Published full ordered 6-cube PoseArray to SS2 on /detected_objects.");
+    RCLCPP_INFO(this->get_logger(),
+                "SS3 handoff complete. SS2 can now execute full pyramid build.");
+  }
+
+  bool validateDetections()
+  {
+    const size_t pose_count = latest_objects_.poses.size();
+    const size_t label_count = latest_labels_.size();
+
+    if (pose_count != label_count)
     {
       RCLCPP_ERROR(this->get_logger(),
                    "Pose-label mismatch. Poses: %zu | Labels: %zu",
-                   latest_objects_.poses.size(),
-                   latest_labels_.size());
-      return;
+                   pose_count,
+                   label_count);
+      return false;
     }
 
-    if (current_stage_ == "SEARCH_FOR_BASE")
-    {
-      processLayer("red", 3, "BASE_LAYER", "WAITING_BASE_COMPLETE");
-    }
-    else if (current_stage_ == "SEARCH_FOR_MIDDLE")
-    {
-      processLayer("yellow", 2, "MIDDLE_LAYER", "WAITING_MIDDLE_COMPLETE");
-    }
-    else if (current_stage_ == "SEARCH_FOR_TOP")
-    {
-      processLayer("blue", 1, "TOP_LAYER", "WAITING_TOP_COMPLETE");
-    }
-  }
-
-  void processLayer(const std::string &colour,
-                    size_t required_count,
-                    const std::string &layer_stage,
-                    const std::string &waiting_stage)
-  {
-    std::vector<size_t> indices = getColourIndices(colour);
-
-    if (indices.size() < required_count)
+    if (pose_count != 6)
     {
       RCLCPP_WARN(this->get_logger(),
-                  "Not enough %s cubes detected. Required: %zu | Detected: %zu",
-                  colour.c_str(),
-                  required_count,
-                  indices.size());
-      return;
+                  "Waiting for all 6 cubes. Current detected poses: %zu",
+                  pose_count);
+      return false;
     }
 
-    sortByNearest(indices);
+    int red_count = countColour("red");
+    int yellow_count = countColour("yellow");
+    int blue_count = countColour("blue");
 
+    if (red_count != 3 || yellow_count != 2 || blue_count != 1)
+    {
+      RCLCPP_ERROR(this->get_logger(),
+                   "Invalid colour distribution. Expected red=3, yellow=2, blue=1 | Received red=%d, yellow=%d, blue=%d",
+                   red_count,
+                   yellow_count,
+                   blue_count);
+      return false;
+    }
+
+    RCLCPP_INFO(this->get_logger(),
+                "Detection validation passed: 3 red, 2 yellow, 1 blue.");
+
+    return true;
+  }
+
+  geometry_msgs::msg::PoseArray generateOrderedPoseArray()
+  {
     geometry_msgs::msg::PoseArray ordered_msg;
     ordered_msg.header = latest_objects_.header;
     ordered_msg.header.frame_id = "base_link";
 
-    RCLCPP_INFO(this->get_logger(),
-                "Preparing %s with %zu %s cube(s).",
-                layer_stage.c_str(),
-                required_count,
-                colour.c_str());
+    std::vector<size_t> red_indices = getColourIndices("red");
+    std::vector<size_t> yellow_indices = getColourIndices("yellow");
+    std::vector<size_t> blue_indices = getColourIndices("blue");
 
-    for (size_t i = 0; i < required_count; ++i)
+    sortByNearest(red_indices);
+    sortByNearest(yellow_indices);
+    sortByNearest(blue_indices);
+
+    RCLCPP_INFO(this->get_logger(), "Ordered sequence for SS2:");
+
+    appendPoses(ordered_msg, red_indices, "red/base");
+    appendPoses(ordered_msg, yellow_indices, "yellow/middle");
+    appendPoses(ordered_msg, blue_indices, "blue/top");
+
+    RCLCPP_INFO(this->get_logger(),
+                "Ordering complete: red base, yellow middle layer, blue top.");
+
+    return ordered_msg;
+  }
+
+  void appendPoses(
+    geometry_msgs::msg::PoseArray &msg,
+    const std::vector<size_t> &indices,
+    const std::string &role)
+  {
+    for (size_t index : indices)
     {
-      const auto &pose = latest_objects_.poses[indices[i]];
-      ordered_msg.poses.push_back(pose);
+      const auto &pose = latest_objects_.poses[index];
+      msg.poses.push_back(pose);
 
       RCLCPP_INFO(this->get_logger(),
-                  "Added %s cube %zu | x=%.3f, y=%.3f, z=%.3f, distance=%.3f",
-                  colour.c_str(),
-                  i + 1,
+                  "Added %s | x=%.3f, y=%.3f, z=%.3f, distance=%.3f",
+                  role.c_str(),
                   pose.position.x,
                   pose.position.y,
                   pose.position.z,
                   planarDistance(pose));
     }
-
-    publishStage(layer_stage);
-    ordered_objects_pub_->publish(ordered_msg);
-
-    RCLCPP_INFO(this->get_logger(),
-                "Published %s ordered poses to SS2 on /detected_objects.",
-                layer_stage.c_str());
-
-    current_stage_ = waiting_stage;
-    publishStage(current_stage_);
-
-    clearPerceptionCache();
   }
 
   std::vector<size_t> getColourIndices(const std::string &colour)
@@ -359,6 +300,11 @@ private:
     }
 
     return indices;
+  }
+
+  int countColour(const std::string &colour)
+  {
+    return std::count(latest_labels_.begin(), latest_labels_.end(), colour);
   }
 
   void sortByNearest(std::vector<size_t> &indices)
@@ -403,31 +349,18 @@ private:
   {
     latest_objects_.poses.clear();
     latest_labels_.clear();
+
     objects_received_ = false;
     labels_received_ = false;
-  }
-
-  void publishStage(const std::string &stage)
-  {
-    auto msg = std_msgs::msg::String();
-    msg.data = stage;
-
-    stage_pub_->publish(msg);
-
-    RCLCPP_INFO(this->get_logger(),
-                "SS3 stage: %s",
-                stage.c_str());
   }
 
   rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr raw_objects_sub_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr labels_sub_;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr start_sub_;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr reset_sub_;
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr ss2_status_sub_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr client_retrieve_sub_;
 
   rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr ordered_objects_pub_;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr stage_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr retrieve_pub_;
 };
 
