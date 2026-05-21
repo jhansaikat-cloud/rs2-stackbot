@@ -10,8 +10,8 @@ static constexpr double PLACE_CLEARANCE = 0.005;
 static constexpr double SURFACE_Z       = 0.001;
 
 //    PYRAMID LAYOUT                                                             
-static constexpr double PYRAMID_X = 0.012;
-static constexpr double PYRAMID_Y = 0.340;
+static constexpr double PYRAMID_X = 0.0;
+static constexpr double PYRAMID_Y = 0.310;
 static constexpr double STEP      = CUBE_SIZE + 0.005;
 
 //    TCP OFFSET                                                                 

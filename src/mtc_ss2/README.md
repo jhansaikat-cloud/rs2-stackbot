@@ -6,6 +6,18 @@ Change "closed" from "0.0" to "0.049"
       <joint name="finger_width" value="0.049"/>
     </group_state>
 
+Add ready_pose (under test_configuration)
+
+    </group_state>
+        <group_state name="${prefix}ready_pose" group="${prefix}${name}_manipulator">
+      <joint name="${prefix}elbow_joint" value="0.48" />
+      <joint name="${prefix}shoulder_lift_joint" value="-1.46" />
+      <joint name="${prefix}shoulder_pan_joint" value="1.42" />
+      <joint name="${prefix}wrist_1_joint" value="-0.57" />
+      <joint name="${prefix}wrist_2_joint" value="-1.58" />
+      <joint name="${prefix}wrist_3_joint" value="-0.23" />
+    </group_state>
+
 In src/ur_onrobot/ur_onrobot_moveit_config/config/controllers.yaml
 
 add at the end

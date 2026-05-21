@@ -36,8 +36,8 @@ static constexpr double PLACE_CLEARANCE = 0.005;
 static constexpr double SURFACE_Z       = 0.028;
 
 //      PYRAMID LAYOUT                                                                                                                         
-static constexpr double PYRAMID_X = 0.012;
-static constexpr double PYRAMID_Y = 0.340;
+static constexpr double PYRAMID_X = 0.0;
+static constexpr double PYRAMID_Y = 0.310;
 static constexpr double STEP      = CUBE_SIZE + 0.005;
 
 //      GRIPPER DOWN ORIENTATION (measured, 180 deg around world Y)                               
@@ -193,29 +193,6 @@ void MTCPyramidNode::setupPlanningScene(const std::vector<CubeInfo>& cubes)
   back_trolley.primitive_poses.push_back(back_pose);
   back_trolley.operation = back_trolley.ADD;
   psi.applyCollisionObject(back_trolley);
-
-  //Camera
-  moveit_msgs::msg::AttachedCollisionObject camera;
-  camera.link_name = "tool0";  // attach to this link
-  camera.object.id = "realsense_camera";
-  camera.object.header.frame_id = "tool0";
-
-  shape_msgs::msg::SolidPrimitive camera_shape;
-  camera_shape.type = shape_msgs::msg::SolidPrimitive::BOX;
-
-  camera_shape.dimensions = { 0.05, 0.04, 0.01 };
-  geometry_msgs::msg::Pose camera_pose;
-  camera_pose.orientation.x = 1.0;
-  camera_pose.orientation.y = 0.0;
-  camera_pose.orientation.z = 0.0;
-  camera_pose.orientation.w = 0.0;
-  camera_pose.position.y = -0.05;
-  camera.object.primitives.push_back(camera_shape);
-  camera.object.primitive_poses.push_back(camera_pose);
-  camera.object.operation = moveit_msgs::msg::CollisionObject::ADD;
-
-  camera.touch_links = { "tool0", "flange", "wrist_3_link", "wrist_2_link", "onrobot_base_link" };
-  psi.applyAttachedCollisionObject(camera);
 
   RCLCPP_INFO(LOGGER, "Planning scene ready.");
 }
@@ -431,6 +408,14 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
     task.add(std::move(pick));
   }
 
+  //      MOVE TO READY POSE (elbow-up intermediate)
+  {
+      auto stage = std::make_unique<mtc::stages::MoveTo>("ready pose", sampling_planner);
+      stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
+      stage->setGoal("ready_pose");
+      task.add(std::move(stage));
+  }
+
   //      PRE-PLACE   
   {
     auto stage = std::make_unique<mtc::stages::MoveTo>("pre-place", sampling_planner);
@@ -490,6 +475,25 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
       }
       place->insert(std::move(stage));
     }
+
+    // disallow finger forearm collision
+    {
+      auto stage = std::make_unique<mtc::stages::ModifyPlanningScene>(
+        "disallow finger forearm collision");
+      stage->allowCollisions(
+        std::vector<std::string>{
+          "left_inner_finger", "right_inner_finger",
+          "left_finger_tip", "right_finger_tip",
+          "left_outer_knuckle",  "right_outer_knuckle",   // 
+          "left_inner_knuckle",  "right_inner_knuckle"    // 
+        },
+        std::vector<std::string>{
+          "forearm_link", "upper_arm_link"
+        },
+        false);
+      place->insert(std::move(stage));
+    }
+
     // Lower
     {
       auto stage = std::make_unique<mtc::stages::MoveRelative>("lower", cartesian_planner);
@@ -501,21 +505,6 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
       vec.header.frame_id = FIXED_FRAME;
       vec.vector.z = -1.0;
       stage->setDirection(vec);
-      place->insert(std::move(stage));
-    }
-
-    {
-      auto stage = std::make_unique<mtc::stages::ModifyPlanningScene>(
-        "disallow finger forearm collision");
-      stage->allowCollisions(
-        std::vector<std::string>{
-          "left_inner_finger", "right_inner_finger",
-          "left_finger_tip", "right_finger_tip"
-        },
-        std::vector<std::string>{
-          "forearm_link", "upper_arm_link"
-        },
-        false);
       place->insert(std::move(stage));
     }
 
