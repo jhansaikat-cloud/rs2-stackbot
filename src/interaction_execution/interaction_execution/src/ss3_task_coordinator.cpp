@@ -127,9 +127,10 @@ private:
        0.19399519264698029   // wrist_3_joint
     };
 
-    move_group.setJointValueTarget(search_joint_values);
+//    move_group.setJointValueTarget(search_joint_values);
+    move_group.setNamedTarget("home");
     move_group.setPlanningTime(10.0);
-    move_group.setNumPlanningAttempts(1);
+    move_group.setNumPlanningAttempts(3);
     move_group.setMaxVelocityScalingFactor(0.10);
     move_group.setMaxAccelerationScalingFactor(0.10);
 
