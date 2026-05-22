@@ -51,3 +51,38 @@ add at the end
         - PRMstarkConfigDefault
       longest_valid_segment_fraction: 0.001
       enforce_joint_model_state_space: true
+
+
+In src/ur_onrobot/ur_onrobot_description/urdf/ur_onrobot_macro.xacro
+
+add camera collision
+
+      <!-- Connect the OnRobot to the UR robot -->
+      <joint name="${tf_prefix}onrobot_base_link_joint" type="fixed">
+          <parent link="${tf_prefix}tool0"/>
+          <child link="${tf_prefix}onrobot_base_link"/>
+          <origin xyz="0 0 0" rpy="0 0 ${-pi/2}"/>  <!-- modified, original xyz="0 0 0", increase Z for offset-->
+      </joint>
+
+      <!-- Camera mount and RealSense D435i -->
+      <link name="${tf_prefix}realsense_mount_camera">
+          <collision>
+              <geometry>
+                  <box size="0.090 0.12 0.04"/>
+              </geometry>
+              <origin xyz="0 0 0" rpy="0 0 0"/>
+          </collision>
+          <visual>
+              <geometry>
+                  <box size="0.090 0.12 0.04"/>
+              </geometry>
+              <origin xyz="0 0 0" rpy="0 0 0"/>
+          </visual>
+      </link>
+      <joint name="${tf_prefix}camera_mount_joint" type="fixed">
+          <parent link="${tf_prefix}tool0"/>
+          <child link="${tf_prefix}realsense_mount_camera"/>
+          <origin xyz="0 -0.025 -0.02" rpy="0 0 0"/> <!-- increase Z for offset -->
+      </joint>
+
+      <!-- Include cable connector collision links -->
