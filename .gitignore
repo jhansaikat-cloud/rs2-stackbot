@@ -61,4 +61,6 @@ __pycache__/
 *.swp
 
 # Catkin custom files
-CATKIN_IGNORE
+CATKIN_IGNOREinstall/
+log/
+src/easy_handeye2
