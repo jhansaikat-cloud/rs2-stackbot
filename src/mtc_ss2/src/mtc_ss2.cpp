@@ -36,8 +36,8 @@ static constexpr double PLACE_CLEARANCE = 0.005;
 static constexpr double SURFACE_Z       = 0.028;
 
 //      PYRAMID LAYOUT                                                                                                                         
-static constexpr double PYRAMID_X = 0.0;
-static constexpr double PYRAMID_Y = 0.310;
+static constexpr double PYRAMID_X = -0.12;
+static constexpr double PYRAMID_Y = 0.31;
 static constexpr double STEP      = CUBE_SIZE + 0.005;
 
 //      GRIPPER DOWN ORIENTATION (measured, 180 deg around world Y)                               
@@ -59,13 +59,13 @@ struct CubeInfo
 };
 
 static const std::vector<CubeInfo> HARDCODED_CUBES = {
-  // name,    pick_x,  pick_y,  place_x,                place_y,   layer, yaw
-  { "cube_1", -0.154,  0.400,  PYRAMID_X + STEP,       PYRAMID_Y, 1,     0.0          }, 
-  { "cube_2", -0.090,  0.390,  PYRAMID_X,              PYRAMID_Y, 1,     0.0          }, 
-  { "cube_3",  0.130,  0.400,  PYRAMID_X - STEP,       PYRAMID_Y, 1,    -M_PI / 4     },
-  { "cube_4", -0.100,  0.250,  PYRAMID_X + STEP / 2.0, PYRAMID_Y, 2,     M_PI / 4     },  
-  { "cube_5", -0.150,  0.200,  PYRAMID_X - STEP / 2.0, PYRAMID_Y, 2,     M_PI / 5     }, 
-  { "cube_6",  0.100,  0.200,  PYRAMID_X,              PYRAMID_Y, 3,    -M_PI / 3     }, 
+  // name,    pick_x,  pick_y,  place_x,       place_y,   layer, yaw
+  { "cube_1", -0.154,  0.400,  PYRAMID_X,      PYRAMID_Y + STEP, 1,     0.0          }, 
+  { "cube_2", -0.090,  0.390,  PYRAMID_X,      PYRAMID_Y, 1,     0.0          }, 
+  { "cube_3",  0.130,  0.400,  PYRAMID_X,      PYRAMID_Y - STEP, 1,    -M_PI / 4     },
+  { "cube_4", -0.100,  0.240,  PYRAMID_X,      PYRAMID_Y+ STEP / 2.0, 2,     M_PI / 4     },  
+  { "cube_5", -0.150,  0.200,  PYRAMID_X,      PYRAMID_Y- STEP / 2.0, 2,     M_PI / 5     }, 
+  { "cube_6",  0.100,  0.200,  PYRAMID_X,      PYRAMID_Y, 3,    -M_PI / 3     }, 
 };
 
 double placeCentreZ(int layer)
@@ -303,7 +303,7 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
     auto stage = std::make_unique<mtc::stages::Connect>(
       "move to pick",
       mtc::stages::Connect::GroupPlannerVector{ { ARM_GROUP, sampling_planner } });
-    stage->setTimeout(15.0);
+    stage->setTimeout(10.0);
     stage->properties().configureInitFrom(mtc::Stage::PARENT);
     task.add(std::move(stage));
   }
@@ -335,7 +335,7 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
       stage->properties().set("marker_ns", "grasp_pose");
       stage->setPreGraspPose("open");
       stage->setObject(cube.name);
-      stage->setAngleDelta(M_PI / 6);  // Param
+      stage->setAngleDelta(M_PI / 2);  // Param
       stage->setMonitoredStage(current_state_ptr);
 
       Eigen::Isometry3d grasp_frame_transform = Eigen::Isometry3d::Identity();
@@ -536,7 +536,7 @@ bool MTCPyramidNode::runPickAndPlace(const CubeInfo& cube)
     return false;
   }
 
-  if (!task.plan(10))
+  if (!task.plan(5))
   {
     RCLCPP_ERROR(LOGGER, "Task planning failed for %s", cube.name.c_str());
     return false;
@@ -608,7 +608,7 @@ bool MTCPyramidNode::tryReturnHome()
   {
     auto stage = std::make_unique<mtc::stages::MoveTo>("go home", sampling_planner);
     stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
-    stage->setGoal("test_configuration"); // ready_pose or test_congifuration
+    stage->setGoal("ready_pose"); // ready_pose or test_congifuration or ready_pose2
     home_task.add(std::move(stage));
   }
 
@@ -647,21 +647,21 @@ void MTCPyramidNode::run()
     [&detected_poses](geometry_msgs::msg::PoseArray::SharedPtr msg)
     { detected_poses = msg; });
 
-  // Wait with timeout, fall back to hardcoded if no SS3 data
+  // 1. Wait with timeout, fall back to hardcoded if no SS3 data
   auto deadline = node_->now() + rclcpp::Duration::from_seconds(5.0);
   while (rclcpp::ok() && node_->now() < deadline && detected_poses == nullptr)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-  // Wait indefinitely until SS3 publishes (no fallback)
+  // 2. Wait indefinitely until SS3 publishes (no fallback)
   // while (rclcpp::ok() && detected_poses == nullptr)
   //   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
   static const std::array<std::tuple<double, double, int>, 6> place_positions = {{
-    { PYRAMID_X + STEP,       PYRAMID_Y, 1 },
+    { PYRAMID_X,              PYRAMID_Y + STEP, 1 },
     { PYRAMID_X,              PYRAMID_Y, 1 },
-    { PYRAMID_X - STEP,       PYRAMID_Y, 1 },
-    { PYRAMID_X + STEP / 2.0, PYRAMID_Y, 2 },
-    { PYRAMID_X - STEP / 2.0, PYRAMID_Y, 2 },
+    { PYRAMID_X,              PYRAMID_Y - STEP, 1 },
+    { PYRAMID_X,              PYRAMID_Y + STEP / 2.0, 2 },
+    { PYRAMID_X,              PYRAMID_Y- STEP / 2.0, 2 },
     { PYRAMID_X,              PYRAMID_Y, 3 },
   }};
 

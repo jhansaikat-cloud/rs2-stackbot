@@ -1,9 +1,12 @@
 In src/ur_onrobot/ur_onrobot_moveit_config/srdf/ur_onrobot_macro.srdf.xacro
 
-Change "closed" from "0.0" to "0.049"
+Change "closed" to "0.049", "open" to "0.100"
 
     <group_state name="closed" group="${prefix}${name}_gripper">
       <joint name="finger_width" value="0.049"/>
+    </group_state>
+    <group_state name="open" group="${prefix}${name}_gripper">
+      <joint name="finger_width" value="0.100"/>
     </group_state>
 
 Add ready_pose (under test_configuration)
@@ -18,6 +21,8 @@ Add ready_pose (under test_configuration)
       <joint name="${prefix}wrist_3_joint" value="-0.23" />
     </group_state>
 
+
+
 In src/ur_onrobot/ur_onrobot_moveit_config/config/controllers.yaml
 
 add at the end
@@ -28,6 +33,7 @@ add at the end
       allowed_start_tolerance: 0.05
 
 In src/ur_onrobot/ur_onrobot_moveit_config/config/ompl_planning.yaml
+
 add at the end
 
     ur_onrobot_manipulator:

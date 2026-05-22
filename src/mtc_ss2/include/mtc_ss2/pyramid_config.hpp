@@ -10,8 +10,8 @@ static constexpr double PLACE_CLEARANCE = 0.005;
 static constexpr double SURFACE_Z       = 0.001;
 
 //    PYRAMID LAYOUT                                                             
-static constexpr double PYRAMID_X = 0.0;
-static constexpr double PYRAMID_Y = 0.310;
+static constexpr double PYRAMID_X = -0.12;
+static constexpr double PYRAMID_Y = 0.31;
 static constexpr double STEP      = CUBE_SIZE + 0.005;
 
 //    TCP OFFSET                                                                 
@@ -38,11 +38,11 @@ struct PyramidCube
 inline std::vector<PyramidCube> getPyramidLayout()
 {
   return {
-    { "cube_1", PYRAMID_X + STEP,       PYRAMID_Y, placeCentreZ(1), 1 },
+    { "cube_1", PYRAMID_X,       PYRAMID_Y + STEP, placeCentreZ(1), 1 },
     { "cube_2", PYRAMID_X,              PYRAMID_Y, placeCentreZ(1), 1 },
-    { "cube_3", PYRAMID_X - STEP,       PYRAMID_Y, placeCentreZ(1), 1 },
-    { "cube_4", PYRAMID_X + STEP / 2.0, PYRAMID_Y, placeCentreZ(2), 2 },
-    { "cube_5", PYRAMID_X - STEP / 2.0, PYRAMID_Y, placeCentreZ(2), 2 },
+    { "cube_3", PYRAMID_X,       PYRAMID_Y - STEP, placeCentreZ(1), 1 },
+    { "cube_4", PYRAMID_X, PYRAMID_Y + STEP / 2.0, placeCentreZ(2), 2 },
+    { "cube_5", PYRAMID_X, PYRAMID_Y - STEP / 2.0, placeCentreZ(2), 2 },
     { "cube_6", PYRAMID_X,              PYRAMID_Y, placeCentreZ(3), 3 },
   };
 }
