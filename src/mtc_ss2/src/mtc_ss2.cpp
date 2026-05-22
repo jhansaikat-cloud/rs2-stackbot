@@ -435,25 +435,22 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
     pre_place.pose.orientation.z = GRIPPER_DOWN_QZ;
     pre_place.pose.orientation.w = GRIPPER_DOWN_QW;
     stage->setGoal(pre_place);
+
+    // Constrain shoulder_pan to [-1.6, 1.6] to block 360-degree wrap-around.
+    // Window is wide enough to cover the full reachable workspace so rejection
+    // sampling finds solutions easily; it only excludes the wrap-around path.
+    moveit_msgs::msg::Constraints path_constraints;
+    moveit_msgs::msg::JointConstraint pan_constraint;
+    pan_constraint.joint_name    = "shoulder_pan_joint";
+    pan_constraint.position      = 0.0;
+    pan_constraint.tolerance_above = 1.6;
+    pan_constraint.tolerance_below = 1.6;
+    pan_constraint.weight        = 1.0;
+    path_constraints.joint_constraints.push_back(pan_constraint);
+    stage->setPathConstraints(path_constraints);
+
     task.add(std::move(stage));
   }
-
-  // //      PRE-PLACE: Cartesian                          
-  // {
-  //   auto stage = std::make_unique<mtc::stages::MoveTo>("pre-place", cartesian_planner);
-  //   stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
-  //   geometry_msgs::msg::PoseStamped pre_place;
-  //   pre_place.header.frame_id = FIXED_FRAME;
-  //   pre_place.pose.position.x = cube.place_x;
-  //   pre_place.pose.position.y = cube.place_y;
-  //   pre_place.pose.position.z = placeTcpZ(cube.layer) + prePlaceHeight(cube.layer);
-  //   pre_place.pose.orientation.x = GRIPPER_DOWN_QX;
-  //   pre_place.pose.orientation.y = GRIPPER_DOWN_QY;
-  //   pre_place.pose.orientation.z = GRIPPER_DOWN_QZ;
-  //   pre_place.pose.orientation.w = GRIPPER_DOWN_QW;
-  //   stage->setGoal(pre_place);
-  //   task.add(std::move(stage));
-  // }
 
   //      PLACE CONTAINER                                                                                                                   
   {

@@ -7,7 +7,7 @@
 //    CUBE DIMENSIONS                                                            
 static constexpr double CUBE_SIZE       = 0.050;
 static constexpr double PLACE_CLEARANCE = 0.005;
-static constexpr double SURFACE_Z       = 0.001;
+static constexpr double SURFACE_Z       = 0.028;
 
 //    PYRAMID LAYOUT                                                             
 static constexpr double PYRAMID_X = -0.12;
