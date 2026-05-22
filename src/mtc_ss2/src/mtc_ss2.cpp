@@ -41,10 +41,15 @@ static constexpr double PYRAMID_Y = 0.31;
 static constexpr double STEP      = CUBE_SIZE + 0.005;
 
 //      GRIPPER DOWN ORIENTATION (measured, 180 deg around world Y)                               
-static constexpr double GRIPPER_DOWN_QX = 0.0;
-static constexpr double GRIPPER_DOWN_QY = 1.0;
-static constexpr double GRIPPER_DOWN_QZ = 0.0;
-static constexpr double GRIPPER_DOWN_QW = 0.0;
+// static constexpr double GRIPPER_DOWN_QX = 0.0;
+// static constexpr double GRIPPER_DOWN_QY = 1.0;
+// static constexpr double GRIPPER_DOWN_QZ = 0.0;
+// static constexpr double GRIPPER_DOWN_QW = 0.0;
+
+static constexpr double GRIPPER_DOWN_QX =  0.7071;
+static constexpr double GRIPPER_DOWN_QY =  0.7071;
+static constexpr double GRIPPER_DOWN_QZ =  0.0;
+static constexpr double GRIPPER_DOWN_QW =  0.0;
 
 //      PRE-PLACE HEIGHT OFFSET                                                                                                       
 static constexpr double PRE_PLACE_HEIGHT = 0.10;
@@ -61,10 +66,10 @@ struct CubeInfo
 static const std::vector<CubeInfo> HARDCODED_CUBES = {
   // name,    pick_x,  pick_y,  place_x,       place_y,   layer, yaw
   { "cube_1", -0.154,  0.400,  PYRAMID_X,      PYRAMID_Y + STEP, 1,     0.0          }, 
-  { "cube_2", -0.090,  0.390,  PYRAMID_X,      PYRAMID_Y, 1,     0.0          }, 
+  { "cube_2", -0.020,  0.390,  PYRAMID_X,      PYRAMID_Y, 1,     0.0          }, 
   { "cube_3",  0.130,  0.400,  PYRAMID_X,      PYRAMID_Y - STEP, 1,    -M_PI / 4     },
-  { "cube_4", -0.100,  0.240,  PYRAMID_X,      PYRAMID_Y+ STEP / 2.0, 2,     M_PI / 4     },  
-  { "cube_5", -0.150,  0.200,  PYRAMID_X,      PYRAMID_Y- STEP / 2.0, 2,     M_PI / 5     }, 
+  { "cube_4", -0.000,  0.240,  PYRAMID_X,      PYRAMID_Y+ STEP / 2.0, 2,     M_PI / 4     },  
+  { "cube_5", -0.060,  0.200,  PYRAMID_X,      PYRAMID_Y- STEP / 2.0, 2,     M_PI / 5     }, 
   { "cube_6",  0.100,  0.200,  PYRAMID_X,      PYRAMID_Y, 3,    -M_PI / 3     }, 
 };
 
@@ -412,7 +417,7 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
   {
       auto stage = std::make_unique<mtc::stages::MoveTo>("ready pose", sampling_planner);
       stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
-      stage->setGoal("ready_pose");
+      stage->setGoal("ready_pose2");
       task.add(std::move(stage));
   }
 
@@ -608,7 +613,7 @@ bool MTCPyramidNode::tryReturnHome()
   {
     auto stage = std::make_unique<mtc::stages::MoveTo>("go home", sampling_planner);
     stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
-    stage->setGoal("ready_pose"); // ready_pose or test_congifuration or ready_pose2
+    stage->setGoal("ready_pose2"); // ready_pose or test_congifuration or ready_pose2
     home_task.add(std::move(stage));
   }
 
