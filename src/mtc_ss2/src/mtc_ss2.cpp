@@ -37,7 +37,7 @@ static constexpr double SURFACE_Z       = 0.028;
 
 //      PYRAMID LAYOUT                                                                                                                         
 static constexpr double PYRAMID_X = -0.12;
-static constexpr double PYRAMID_Y = 0.31;
+static constexpr double PYRAMID_Y = 0.3;
 static constexpr double STEP      = CUBE_SIZE + 0.005;
 
 //      GRIPPER DOWN ORIENTATION (measured, 180 deg around world Y)                               
@@ -68,9 +68,9 @@ static const std::vector<CubeInfo> HARDCODED_CUBES = {
   { "cube_1", -0.154,  0.400,  PYRAMID_X,      PYRAMID_Y + STEP, 1,     0.0          }, 
   { "cube_2", -0.020,  0.390,  PYRAMID_X,      PYRAMID_Y, 1,     0.0          }, 
   { "cube_3",  0.130,  0.400,  PYRAMID_X,      PYRAMID_Y - STEP, 1,    -M_PI / 4     },
-  { "cube_4", -0.000,  0.240,  PYRAMID_X,      PYRAMID_Y+ STEP / 2.0, 2,     M_PI / 4     },  
-  { "cube_5", -0.060,  0.200,  PYRAMID_X,      PYRAMID_Y- STEP / 2.0, 2,     M_PI / 5     }, 
-  { "cube_6",  0.100,  0.200,  PYRAMID_X,      PYRAMID_Y, 3,    -M_PI / 3     }, 
+  { "cube_4",  0.060,  0.320,  PYRAMID_X,      PYRAMID_Y+ STEP / 2.0, 2,     M_PI / 4     },  
+  { "cube_5",  0.005,  0.240,  PYRAMID_X,      PYRAMID_Y- STEP / 2.0, 2,     M_PI / 5     }, 
+  { "cube_6",  0.100,  0.320,  PYRAMID_X,      PYRAMID_Y, 3,    -M_PI / 3     }, 
 };
 
 double placeCentreZ(int layer)
@@ -263,6 +263,21 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
 
   auto sampling_planner      = std::make_shared<mtc::solvers::PipelinePlanner>(node_);
   sampling_planner->setProperty("longest_valid_segment_fraction", 0.001);
+
+  // RRTstar for stages that need smooth, low-excursion paths.
+  // Unlike RRTConnect, RRTstar continuously optimises within its time budget.
+  // For ready pose and pre-place
+  auto optimising_planner = std::make_shared<mtc::solvers::PipelinePlanner>(node_);
+  optimising_planner->setProperty("longest_valid_segment_fraction", 0.001);
+  optimising_planner->setPlannerId("RRTstarkConfigDefault");
+  optimising_planner->setTimeout(10.0);
+
+  // For move-to-pick — needs more time due to cluttered scene
+  auto optimising_planner_pick = std::make_shared<mtc::solvers::PipelinePlanner>(node_);
+  optimising_planner_pick->setProperty("longest_valid_segment_fraction", 0.001);
+  optimising_planner_pick->setPlannerId("RRTstarkConfigDefault");
+  optimising_planner_pick->setTimeout(15.0);
+
   auto interpolation_planner = std::make_shared<mtc::solvers::JointInterpolationPlanner>();
   interpolation_planner->setMaxVelocityScalingFactor(0.1);
   interpolation_planner->setMaxAccelerationScalingFactor(0.1);
@@ -305,10 +320,17 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
 
   //      MOVE TO PRE-PICK                                                                                                                 
   {
+    
     auto stage = std::make_unique<mtc::stages::Connect>(
       "move to pick",
-      mtc::stages::Connect::GroupPlannerVector{ { ARM_GROUP, sampling_planner } });
-    stage->setTimeout(10.0);
+      mtc::stages::Connect::GroupPlannerVector{ { ARM_GROUP, optimising_planner_pick } });
+    stage->setTimeout(15.0);
+    // RRTConnect
+    // auto stage = std::make_unique<mtc::stages::Connect>(
+    //   "move to pick",
+    //   mtc::stages::Connect::GroupPlannerVector{ { ARM_GROUP, sampling_planner } });
+    // stage->setTimeout(10.0);
+    
     stage->properties().configureInitFrom(mtc::Stage::PARENT);
     task.add(std::move(stage));
   }
@@ -413,9 +435,10 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
     task.add(std::move(pick));
   }
 
-  //      MOVE TO READY POSE (elbow-up intermediate)
+  //      MOVE TO READY POSE
   {
-      auto stage = std::make_unique<mtc::stages::MoveTo>("ready pose", sampling_planner);
+      auto stage = std::make_unique<mtc::stages::MoveTo>("ready pose", optimising_planner);
+      // auto stage = std::make_unique<mtc::stages::MoveTo>("ready pose", sampling_planner);
       stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
       stage->setGoal("ready_pose2");
       task.add(std::move(stage));
@@ -423,7 +446,8 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
 
   //      PRE-PLACE   
   {
-    auto stage = std::make_unique<mtc::stages::MoveTo>("pre-place", sampling_planner);
+    auto stage = std::make_unique<mtc::stages::MoveTo>("pre-place", optimising_planner);
+    // auto stage = std::make_unique<mtc::stages::MoveTo>("pre-place", sampling_planner);
     stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
     geometry_msgs::msg::PoseStamped pre_place;
     pre_place.header.frame_id = FIXED_FRAME;
@@ -538,7 +562,7 @@ bool MTCPyramidNode::runPickAndPlace(const CubeInfo& cube)
     return false;
   }
 
-  if (!task.plan(5))
+  if (!task.plan(3))
   {
     RCLCPP_ERROR(LOGGER, "Task planning failed for %s", cube.name.c_str());
     return false;
@@ -584,6 +608,13 @@ bool MTCPyramidNode::tryReturnHome()
   home_task.setProperty("ik_frame", HAND_FRAME);
 
   auto sampling_planner  = std::make_shared<mtc::solvers::PipelinePlanner>(node_);
+  // RRTstar for stages that need smooth, low-excursion paths.
+  // Unlike RRTConnect, RRTstar continuously optimises within its time budget.
+  auto optimising_planner = std::make_shared<mtc::solvers::PipelinePlanner>(node_);
+  optimising_planner->setProperty("longest_valid_segment_fraction", 0.001);
+  optimising_planner->setPlannerId("RRTstarkConfigDefault");
+  optimising_planner->setTimeout(15.0);
+
   auto cartesian_planner = std::make_shared<mtc::solvers::CartesianPath>();
   cartesian_planner->setMaxVelocityScalingFactor(1.0);
   cartesian_planner->setMaxAccelerationScalingFactor(1.0);
@@ -608,7 +639,8 @@ bool MTCPyramidNode::tryReturnHome()
   }
 
   {
-    auto stage = std::make_unique<mtc::stages::MoveTo>("go home", sampling_planner);
+    auto stage = std::make_unique<mtc::stages::MoveTo>("go home", optimising_planner);
+    // auto stage = std::make_unique<mtc::stages::MoveTo>("go home", sampling_planner);
     stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
     stage->setGoal("ready_pose2"); // ready_pose or test_congifuration or ready_pose2
     home_task.add(std::move(stage));
@@ -620,7 +652,7 @@ bool MTCPyramidNode::tryReturnHome()
     RCLCPP_WARN_STREAM(LOGGER, "Return home init failed: " << e);
     return false;
   }
-  if (!home_task.plan(3))
+  if (!home_task.plan(2))
   {
     RCLCPP_WARN(LOGGER, "Return home planning failed");
     return false;

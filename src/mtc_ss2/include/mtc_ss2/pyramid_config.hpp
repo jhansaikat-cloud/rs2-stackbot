@@ -14,19 +14,12 @@ static constexpr double PYRAMID_X = -0.12;
 static constexpr double PYRAMID_Y = 0.31;
 static constexpr double STEP      = CUBE_SIZE + 0.005;
 
-//    TCP OFFSET                                                                 
-static constexpr double GRASP_TCP_TO_CUBE_OFFSET = 0.010;
-
 //    HEIGHT HELPERS                                                             
 inline double placeCentreZ(int layer)
 {
   return SURFACE_Z + PLACE_CLEARANCE + (layer - 1) * CUBE_SIZE + CUBE_SIZE / 2.0;
 }
 
-inline double placeTcpZ(int layer)
-{
-  return placeCentreZ(layer) + GRASP_TCP_TO_CUBE_OFFSET;
-}
 
 struct PyramidCube
 {
@@ -70,12 +63,12 @@ struct StagingSlot
 inline std::vector<StagingSlot> getStagingSlots()
 {
   return {
-    { 0.200, 0.200, false },
-    { 0.200, 0.270, false },
-    { 0.200, 0.350, false },
+    { 0.08, 0.350, false },
+    { 0.08, 0.290, false },
+    { 0.08, 0.230, false },
   };
 }
 
 //    DELIVERY POSITION                                                          
-static constexpr double DELIVERY_X = -0.200;
-static constexpr double DELIVERY_Y =  0.200;
+static constexpr double DELIVERY_X =  -0.0;
+static constexpr double DELIVERY_Y =  0.39;

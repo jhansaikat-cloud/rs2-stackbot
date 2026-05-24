@@ -33,8 +33,8 @@ static const std::string HAND_FRAME  = "gripper_tcp";
 static const std::string FIXED_FRAME = "base_link";
 
 //    GRIPPER DOWN ORIENTATION                                                   
-static constexpr double GRIPPER_DOWN_QX = 0.0;
-static constexpr double GRIPPER_DOWN_QY = 1.0;
+static constexpr double GRIPPER_DOWN_QX = 0.7071;
+static constexpr double GRIPPER_DOWN_QY = 0.7071;
 static constexpr double GRIPPER_DOWN_QZ = 0.0;
 static constexpr double GRIPPER_DOWN_QW = 0.0;
 
@@ -73,10 +73,11 @@ private:
 
   bool pickAndPlace(const CubeState& cube, double place_x, double place_y, double place_z);
   bool tryReturnHome();
+  void clearScene();  
 
   mtc::Task createPickTask(const std::string& cube_name,
-                           double pick_x, double pick_y, double pick_z,
-                           double place_x, double place_y, double place_z);
+                           double place_x, double place_y, double place_z,
+                           bool is_top_cube = false);
 
   rclcpp::Node::SharedPtr node_;
 
@@ -147,6 +148,27 @@ std::vector<std::string> RetrievalNode::computeRemovalOrder(const std::string& t
   dfs(target);
   return order; 
 }
+
+void RetrievalNode::clearScene()                                      
+{
+  moveit::planning_interface::PlanningSceneInterface psi;
+  std::vector<std::string> to_remove = {
+    "table", "back_trolley",
+    "cube_1_placed", "cube_2_placed", "cube_3_placed",
+    "cube_4_placed", "cube_5_placed", "cube_6_placed",
+    "cube_4_staged", "cube_5_staged", "cube_6_staged",
+  };
+  for (const auto& id : to_remove)
+  {
+    moveit_msgs::msg::CollisionObject obj;
+    obj.id = id;
+    obj.header.frame_id = FIXED_FRAME;
+    obj.operation = moveit_msgs::msg::CollisionObject::REMOVE;
+    psi.applyCollisionObject(obj);
+  }
+  RCLCPP_INFO(LOGGER, "Cleared previous scene objects.");
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+}     
 
 void RetrievalNode::setupPlanningScene()
 {
@@ -259,8 +281,8 @@ void RetrievalNode::cleanupAfterFailedExecution(const std::string& cube_name)
 //    MTC TASK                                                                   
 mtc::Task RetrievalNode::createPickTask(
   const std::string& cube_name,
-  double pick_x, double pick_y, double pick_z,
-  double place_x, double place_y, double place_z)
+  double place_x, double place_y, double place_z,
+  bool is_top_cube)
 {
   mtc::Task task;
   task.stages()->setName("retrieve_" + cube_name);
@@ -270,14 +292,23 @@ mtc::Task RetrievalNode::createPickTask(
   task.setProperty("eef",      HAND_GROUP);
   task.setProperty("ik_frame", HAND_FRAME);
 
-  auto sampling_planner      = std::make_shared<mtc::solvers::PipelinePlanner>(node_);
-  auto interpolation_planner = std::make_shared<mtc::solvers::JointInterpolationPlanner>();
-  auto cartesian_planner     = std::make_shared<mtc::solvers::CartesianPath>();
-  cartesian_planner->setMaxVelocityScalingFactor(1.0);
-  cartesian_planner->setMaxAccelerationScalingFactor(1.0);
-  cartesian_planner->setStepSize(0.002);
+  auto optimising_planner = std::make_shared<mtc::solvers::PipelinePlanner>(node_);
+  optimising_planner->setProperty("longest_valid_segment_fraction", 0.001);
+  optimising_planner->setPlannerId("RRTstarkConfigDefault");
+  optimising_planner->setTimeout(10.0);
 
-  const double place_tcp_z = place_z + GRASP_TCP_TO_CUBE_OFFSET;
+  auto optimising_planner_pick = std::make_shared<mtc::solvers::PipelinePlanner>(node_);
+  optimising_planner_pick->setProperty("longest_valid_segment_fraction", 0.001);
+  optimising_planner_pick->setPlannerId("RRTstarkConfigDefault");
+  optimising_planner_pick->setTimeout(20.0);
+
+  auto interpolation_planner = std::make_shared<mtc::solvers::JointInterpolationPlanner>();
+
+  auto cartesian_planner = std::make_shared<mtc::solvers::CartesianPath>();
+  cartesian_planner->setMaxVelocityScalingFactor(0.3);
+  cartesian_planner->setMaxAccelerationScalingFactor(0.3);
+  cartesian_planner->setStepSize(0.001);
+  cartesian_planner->setJumpThreshold(2.0);
 
   //    CURRENT STATE                                                          
   mtc::Stage* current_state_ptr = nullptr;
@@ -299,8 +330,8 @@ mtc::Task RetrievalNode::createPickTask(
   {
     auto stage = std::make_unique<mtc::stages::Connect>(
       "move to pick",
-      mtc::stages::Connect::GroupPlannerVector{ { ARM_GROUP, sampling_planner } });
-    stage->setTimeout(15.0);
+      mtc::stages::Connect::GroupPlannerVector{ { ARM_GROUP, optimising_planner_pick } });
+    stage->setTimeout(20.0);
     stage->properties().configureInitFrom(mtc::Stage::PARENT);
     task.add(std::move(stage));
   }
@@ -311,18 +342,41 @@ mtc::Task RetrievalNode::createPickTask(
     task.properties().exposeTo(pick->properties(), { "eef", "group", "ik_frame" });
     pick->properties().configureInitFrom(mtc::Stage::PARENT, { "eef", "group", "ik_frame" });
 
+    // Allow cube vs pyramid collisions before approach
+    {
+        auto stage = std::make_unique<mtc::stages::ModifyPlanningScene>(
+            "allow cube vs pyramid collisions");
+        std::vector<std::string> others;
+        for (const auto& s : cube_states_)
+            if (s.info.name != cube_name && s.location == CubeLocation::PYRAMID)
+                others.push_back(s.info.name + "_placed");
+        stage->allowCollisions(cube_name + "_placed", others, true);
+        pick->insert(std::move(stage));
+    }
+
     // Approach
     {
-      auto stage = std::make_unique<mtc::stages::MoveRelative>("approach", cartesian_planner);
-      stage->properties().set("marker_ns", "approach");
-      stage->properties().set("link", HAND_FRAME);
-      stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
-      stage->setMinMaxDistance(0.01, 0.10);
-      geometry_msgs::msg::Vector3Stamped vec;
-      vec.header.frame_id = FIXED_FRAME;
-      vec.vector.z        = -1.0;
-      stage->setDirection(vec);
-      pick->insert(std::move(stage));
+        auto stage = std::make_unique<mtc::stages::MoveRelative>("approach", cartesian_planner);
+        stage->properties().set("marker_ns", "approach");
+        stage->properties().set("link", HAND_FRAME);
+        stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
+        stage->setMinMaxDistance(0.01, 0.10);
+
+        if (is_top_cube)
+        {
+            geometry_msgs::msg::TwistStamped twist;
+            twist.header.frame_id = HAND_FRAME;
+            twist.twist.linear.z  = 1.0;
+            stage->setDirection(twist);
+        }
+        else
+        {
+            geometry_msgs::msg::Vector3Stamped vec;
+            vec.header.frame_id = FIXED_FRAME;
+            vec.vector.z        = -1.0;
+            stage->setDirection(vec);
+        }
+        pick->insert(std::move(stage));
     }
 
     // Generate grasp pose + IK
@@ -391,23 +445,55 @@ mtc::Task RetrievalNode::createPickTask(
       pick->insert(std::move(stage));
     }
 
+    // Disallow cube vs pyramid collisions after lift
+    {
+        auto stage = std::make_unique<mtc::stages::ModifyPlanningScene>(
+            "disallow cube vs pyramid collisions");
+        std::vector<std::string> others;
+        for (const auto& s : cube_states_)
+            if (s.info.name != cube_name && s.location == CubeLocation::PYRAMID)
+                others.push_back(s.info.name + "_placed");
+        stage->allowCollisions(cube_name + "_placed", others, false);
+        pick->insert(std::move(stage));
+    }
+
     task.add(std::move(pick));
   }
 
-  //    PRE-PLACE                                                              
   {
-    auto stage = std::make_unique<mtc::stages::MoveTo>("pre-place", sampling_planner);
+  // Ready pose
+    auto stage = std::make_unique<mtc::stages::MoveTo>("ready pose", optimising_planner);
+    stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
+    stage->setGoal("ready_pose2");
+    task.add(std::move(stage));
+  }
+
+  //    PRE-PLACE                                                              
+  //
+  {
+    auto stage = std::make_unique<mtc::stages::MoveTo>("pre-place", optimising_planner);
     stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
     geometry_msgs::msg::PoseStamped pre_place;
     pre_place.header.frame_id    = FIXED_FRAME;
     pre_place.pose.position.x    = place_x;
     pre_place.pose.position.y    = place_y;
-    pre_place.pose.position.z    = place_tcp_z + PRE_PLACE_HEIGHT;
+    pre_place.pose.position.z    = place_z + PRE_PLACE_HEIGHT;
     pre_place.pose.orientation.x = GRIPPER_DOWN_QX;
     pre_place.pose.orientation.y = GRIPPER_DOWN_QY;
     pre_place.pose.orientation.z = GRIPPER_DOWN_QZ;
     pre_place.pose.orientation.w = GRIPPER_DOWN_QW;
     stage->setGoal(pre_place);
+
+    moveit_msgs::msg::Constraints path_constraints;
+    moveit_msgs::msg::JointConstraint pan_constraint;
+    pan_constraint.joint_name      = "shoulder_pan_joint";
+    pan_constraint.position        = 0.0;
+    pan_constraint.tolerance_above = 1.6;
+    pan_constraint.tolerance_below = 1.6;
+    pan_constraint.weight          = 1.0;
+    path_constraints.joint_constraints.push_back(pan_constraint);
+    stage->setPathConstraints(path_constraints);
+
     task.add(std::move(stage));
   }
 
@@ -437,6 +523,14 @@ mtc::Task RetrievalNode::createPickTask(
       stage->setGroup(HAND_GROUP);
       stage->setGoal("open");
       place->insert(std::move(stage));
+    }
+
+    // Detach cube
+    {
+        auto stage = std::make_unique<mtc::stages::ModifyPlanningScene>(
+            "detach " + cube_name);
+        stage->detachObject(cube_name + "_placed", HAND_FRAME);
+        place->insert(std::move(stage));
     }
 
     // Retreat
@@ -469,8 +563,8 @@ bool RetrievalNode::pickAndPlace(
   {
     auto task = createPickTask(
       cube.info.name,
-      cube.info.x, cube.info.y, cube.info.z,
-      place_x, place_y, place_z);
+      place_x, place_y, place_z,
+      cube.info.name == "cube_6");
 
     try { task.init(); }
     catch (mtc::InitStageException& e)
@@ -479,7 +573,7 @@ bool RetrievalNode::pickAndPlace(
       continue;
     }
 
-    if (!task.plan(10))
+    if (!task.plan(3))
     {
       RCLCPP_WARN(LOGGER, "Planning failed (attempt %d/%d)", attempt, MAX_ATTEMPTS);
       continue;
@@ -508,11 +602,16 @@ bool RetrievalNode::tryReturnHome()
   task.setProperty("group", ARM_GROUP);
   task.setProperty("ik_frame", HAND_FRAME);
 
-  auto sampling_planner  = std::make_shared<mtc::solvers::PipelinePlanner>(node_);
+  auto optimising_planner = std::make_shared<mtc::solvers::PipelinePlanner>(node_);
+  optimising_planner->setProperty("longest_valid_segment_fraction", 0.001);
+  optimising_planner->setPlannerId("RRTstarkConfigDefault");
+  optimising_planner->setTimeout(10.0);
+
   auto cartesian_planner = std::make_shared<mtc::solvers::CartesianPath>();
-  cartesian_planner->setMaxVelocityScalingFactor(1.0);
-  cartesian_planner->setMaxAccelerationScalingFactor(1.0);
-  cartesian_planner->setStepSize(0.002);
+  cartesian_planner->setMaxVelocityScalingFactor(0.3);
+  cartesian_planner->setMaxAccelerationScalingFactor(0.3);
+  cartesian_planner->setStepSize(0.001);
+  cartesian_planner->setJumpThreshold(2.0);
 
   {
     auto stage = std::make_unique<mtc::stages::CurrentState>("current");
@@ -530,9 +629,9 @@ bool RetrievalNode::tryReturnHome()
     task.add(std::move(stage));
   }
   {
-    auto stage = std::make_unique<mtc::stages::MoveTo>("go home", sampling_planner);
+    auto stage = std::make_unique<mtc::stages::MoveTo>("go home", optimising_planner);
     stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
-    stage->setGoal("test_configuration");
+    stage->setGoal("ready_pose2");
     task.add(std::move(stage));
   }
 
@@ -550,6 +649,7 @@ bool RetrievalNode::tryReturnHome()
 //    RUN                                                                        
 void RetrievalNode::run()
 {
+  clearScene();
   setupPlanningScene();
 
   sub_ = node_->create_subscription<std_msgs::msg::String>(
