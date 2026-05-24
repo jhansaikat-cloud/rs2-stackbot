@@ -128,7 +128,7 @@ private:
     };
 
 //    move_group.setJointValueTarget(search_joint_values);
-    move_group.setNamedTarget("test_config");
+    move_group.setNamedTarget("home");
     move_group.setPlanningTime(10.0);
     move_group.setNumPlanningAttempts(3);
     move_group.setMaxVelocityScalingFactor(0.10);
