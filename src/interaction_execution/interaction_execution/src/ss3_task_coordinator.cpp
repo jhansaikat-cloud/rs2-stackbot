@@ -27,6 +27,10 @@ public:
     labels_sub_ = this->create_subscription<std_msgs::msg::String>(
       "/object_labels", 10,
       std::bind(&SS3TaskCoordinator::labelsCallback, this, std::placeholders::_1));
+      
+    pyramid_config_sub_ = this->create_subscription<std_msgs::msg::String>(
+      "/pyramid_config", 10,
+      std::bind(&SS3TaskCoordinator::pyramidConfigCallback, this, std::placeholders::_1));
 
     start_sub_ = this->create_subscription<std_msgs::msg::Bool>(
       "/client/start", 10,
@@ -78,6 +82,11 @@ private:
   bool task_active_ = false;
   bool sequence_published_ = false;
   bool search_position_reached_ = false;
+  
+  double pyramid_x_ = -0.12;
+  double pyramid_y_ = 0.30;
+  double pyramid_step_ = 0.0555;
+  bool pyramid_config_received_ = false;
 
   int search_retry_count_ = 0;
   const int max_search_retries_ = 2;
@@ -175,14 +184,14 @@ private:
     clearPerceptionCache();
     
     // TEST MODE ONLY: bypass MoveIt search position when no robot/MoveIt is running.
-    search_position_reached_ = true;
+    //search_position_reached_ = true;
 
-    setState(RobotState::WAITING_FOR_DETECTION);
+    //setState(RobotState::WAITING_FOR_DETECTION);
 
-    RCLCPP_WARN(this->get_logger(),
-	"TEST MODE: Search position bypassed. Waiting for SS1 cube poses and labels.");
-    tryPublishSequence();
-    return;
+    //RCLCPP_WARN(this->get_logger(),
+	//"TEST MODE: Search position bypassed. Waiting for SS1 cube poses and labels.");
+    //tryPublishSequence();
+    //return;
 
     last_published_sequence_.poses.clear();
 
@@ -241,15 +250,6 @@ private:
       task_active_ = false;
 
     }).detach();
-
-//search_position_reached_ = true;
-//
-//setState(RobotState::WAITING_FOR_DETECTION);
-//
-//RCLCPP_WARN(this->get_logger(),
-//            "TEST MODE: Search position bypassed (no robot/MoveIt running).");
-//
-//tryPublishSequence();
   }
 
   void resetCallback(const std_msgs::msg::Bool::SharedPtr msg)
@@ -298,6 +298,46 @@ private:
     tryPublishSequence();
   }
 
+void pyramidConfigCallback(const std_msgs::msg::String::SharedPtr msg)
+{
+  std::stringstream ss(msg->data);
+  std::string item;
+  std::vector<double> values;
+
+  while (std::getline(ss, item, ','))
+  {
+    try
+    {
+      values.push_back(std::stod(item));
+    }
+    catch (const std::exception &e)
+    {
+      RCLCPP_ERROR(this->get_logger(),
+                   "Invalid /pyramid_config value received: %s",
+                   msg->data.c_str());
+      return;
+    }
+  }
+
+  if (values.size() != 3)
+  {
+    RCLCPP_ERROR(this->get_logger(),
+                 "Invalid /pyramid_config format. Expected: PYRAMID_X,PYRAMID_Y,STEP");
+    return;
+  }
+
+  pyramid_x_ = values[0];
+  pyramid_y_ = values[1];
+  pyramid_step_ = values[2];
+  pyramid_config_received_ = true;
+
+  RCLCPP_INFO(this->get_logger(),
+              "Updated pyramid config from SS2: x=%.3f, y=%.3f, step=%.4f",
+              pyramid_x_,
+              pyramid_y_,
+              pyramid_step_);
+}
+
   void retrieveCallback(const std_msgs::msg::String::SharedPtr msg)
   {
     if (state_ != RobotState::SEQUENCE_PUBLISHED &&
@@ -321,16 +361,35 @@ private:
 
   void tryPublishSequence()
   {
-    if (!task_active_ || sequence_published_)
-      return;
-
-    if (!search_position_reached_)
-      return;
-
     if (!objects_received_ || !labels_received_)
-      return;
+  return;
 
-    setState(RobotState::VALIDATING);
+if (!pyramid_config_received_)
+{
+  RCLCPP_WARN_THROTTLE(this->get_logger(),
+                       *this->get_clock(),
+                       5000,
+                       "No /pyramid_config received. Using default pyramid config: x=%.3f, y=%.3f, step=%.4f",
+                       pyramid_x_,
+                       pyramid_y_,
+                       pyramid_step_);
+}
+
+if (!isBuildZoneClear())
+{
+  RCLCPP_ERROR(this->get_logger(),
+               "SS3 blocked publishing because pyramid build zone is occupied. Waiting for updated SS1 detections...");
+
+  setState(RobotState::WAITING_FOR_DETECTION);
+
+  // Do not reset task_active_
+  // Do not set sequence_published_
+  // Do not clear perception cache
+  // SS3 will automatically re-check when SS1 publishes updated poses/labels.
+  return;
+}
+
+setState(RobotState::VALIDATING);
 
     if (!isDetectionStable())
     {
@@ -456,6 +515,41 @@ else
                          last_published_sequence_.poses.size());
   }
 
+bool isBuildZoneClear()
+{
+  const double safe_radius = pyramid_step_ * 2.2;
+
+  for (const auto &pose : latest_objects_.poses)
+  {
+    double dx = pose.position.x - pyramid_x_;
+    double dy = pose.position.y - pyramid_y_;
+    double distance = std::sqrt(dx * dx + dy * dy);
+
+    if (distance < safe_radius)
+    {
+      RCLCPP_ERROR(this->get_logger(),
+                   "Build zone occupied. Cube at x=%.3f, y=%.3f is %.3f m from pyramid centre x=%.3f, y=%.3f. Safe radius=%.3f m.",
+                   pose.position.x,
+                   pose.position.y,
+                   distance,
+                   pyramid_x_,
+                   pyramid_y_,
+                   safe_radius);
+
+      return false;
+    }
+  }
+
+  RCLCPP_INFO_THROTTLE(this->get_logger(),
+                       *this->get_clock(),
+                       3000,
+                       "Build zone clear. Pyramid centre x=%.3f, y=%.3f, step=%.4f",
+                       pyramid_x_,
+                       pyramid_y_,
+                       pyramid_step_);
+
+  return true;
+}
   bool validateFullPyramid()
   {
     const size_t pose_count = latest_objects_.poses.size();
@@ -775,6 +869,7 @@ int findNearestUnusedIndex(const std::vector<bool> &used)
 
   rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr raw_objects_sub_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr labels_sub_;
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr pyramid_config_sub_;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr start_sub_;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr reset_sub_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr retrieve_sub_;
