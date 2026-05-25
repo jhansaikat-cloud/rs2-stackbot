@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -84,6 +85,10 @@ private:
   int stable_detection_count_ = 0;
   const int required_stable_detections_ = 3;
   std::string last_detection_signature_;
+  
+  const int perception_settle_seconds_ = 5;
+  const int full_detection_wait_seconds_ = 3;
+  bool partial_wait_done_ = false;
 
   std::string stateToString(RobotState state)
   {
@@ -165,8 +170,20 @@ private:
     search_retry_count_ = 0;
     stable_detection_count_ = 0;
     last_detection_signature_.clear();
+    partial_wait_done_ = false;
 
     clearPerceptionCache();
+    
+    // TEST MODE ONLY: bypass MoveIt search position when no robot/MoveIt is running.
+    search_position_reached_ = true;
+
+    setState(RobotState::WAITING_FOR_DETECTION);
+
+    RCLCPP_WARN(this->get_logger(),
+	"TEST MODE: Search position bypassed. Waiting for SS1 cube poses and labels.");
+    tryPublishSequence();
+    return;
+
     last_published_sequence_.poses.clear();
 
     setState(RobotState::MOVING_TO_SEARCH);
@@ -184,17 +201,30 @@ private:
           return;
         }
 
-        if (success)
-        {
-          search_position_reached_ = true;
-          setState(RobotState::WAITING_FOR_DETECTION);
+	if (success)
+	{
+	  search_position_reached_ = true;
+	  setState(RobotState::WAITING_FOR_DETECTION);
 
-          RCLCPP_INFO(this->get_logger(),
-                      "Search position complete. Waiting for stable SS1 cube poses and labels.");
+	  RCLCPP_INFO(this->get_logger(),
+		      "Search position reached. Waiting %d seconds for SS1 perception to stabilise...",
+		      perception_settle_seconds_);
 
-          tryPublishSequence();
-          return;
-        }
+	  std::this_thread::sleep_for(std::chrono::seconds(perception_settle_seconds_));
+
+	  if (!task_active_)
+	  {
+	    RCLCPP_WARN(this->get_logger(),
+		        "Perception settling finished, but task was reset/cancelled.");
+	    return;
+	  }
+
+	  RCLCPP_INFO(this->get_logger(),
+		      "Perception settling complete. SS3 will now process SS1 detections.");
+
+	  tryPublishSequence();
+	  return;
+	}
 
         search_retry_count_++;
 
@@ -235,6 +265,7 @@ private:
     search_retry_count_ = 0;
     stable_detection_count_ = 0;
     last_detection_signature_.clear();
+    partial_wait_done_ = false;
 
     clearPerceptionCache();
     last_published_sequence_.poses.clear();
@@ -313,23 +344,51 @@ private:
 
     geometry_msgs::msg::PoseArray output_msg;
 
-    if (validateFullPyramid())
+if (validateFullPyramid())
+{
+  output_msg = generateFullPyramidPoseArray();
+  RCLCPP_INFO(this->get_logger(), "Publishing FULL PYRAMID sequence.");
+}
+else if (canBuildPartialPyramid())
+{
+  if (!partial_wait_done_)
+  {
+    RCLCPP_WARN(this->get_logger(),
+                "Partial sequence available, but waiting %d seconds for possible full 6-cube detection...",
+                full_detection_wait_seconds_);
+
+    partial_wait_done_ = true;
+
+    std::thread([this]()
     {
-      output_msg = generateFullPyramidPoseArray();
-      RCLCPP_INFO(this->get_logger(), "Publishing FULL PYRAMID sequence.");
-    }
-    else if (canBuildBaseFallback())
-    {
-      output_msg = generateBaseFallbackPoseArray();
-      RCLCPP_WARN(this->get_logger(), "Publishing BASE-ONLY fallback sequence.");
-    }
-    else
-    {
+      std::this_thread::sleep_for(std::chrono::seconds(full_detection_wait_seconds_));
+
+      if (!task_active_ || sequence_published_)
+        return;
+
       RCLCPP_WARN(this->get_logger(),
-                  "No valid sequence available yet. Waiting for better SS1 data.");
-      setState(RobotState::WAITING_FOR_DETECTION);
-      return;
-    }
+                  "Full detection wait window finished. Proceeding with best available sequence.");
+
+      tryPublishSequence();
+
+    }).detach();
+
+    setState(RobotState::WAITING_FOR_DETECTION);
+    return;
+  }
+
+  output_msg = generatePartialPyramidPoseArray();
+  RCLCPP_WARN(this->get_logger(),
+              "Publishing PARTIAL PYRAMID sequence with %zu pose(s).",
+              output_msg.poses.size());
+}
+else
+{
+  RCLCPP_WARN(this->get_logger(),
+              "No valid sequence available yet. Waiting for better SS1 data.");
+  setState(RobotState::WAITING_FOR_DETECTION);
+  return;
+}
 
       RCLCPP_INFO(this->get_logger(),
             "Valid sequence generated. Waiting 2 seconds before publishing to SS2...");
@@ -439,27 +498,28 @@ private:
     return true;
   }
 
-  bool canBuildBaseFallback()
+bool canBuildPartialPyramid()
+{
+  if (latest_objects_.poses.size() != latest_labels_.size())
   {
-    if (latest_objects_.poses.size() < 3)
-    {
-      RCLCPP_WARN(this->get_logger(),
-                  "Base fallback unavailable: fewer than 3 cubes detected.");
-      return false;
-    }
-
-    if (latest_objects_.poses.size() != latest_labels_.size())
-    {
-      RCLCPP_WARN(this->get_logger(),
-                  "Base fallback unavailable: pose-label mismatch.");
-      return false;
-    }
-
     RCLCPP_WARN(this->get_logger(),
-                "Base fallback available: using nearest 3 detected cubes.");
-
-    return true;
+                "Partial pyramid unavailable: pose-label mismatch.");
+    return false;
   }
+
+  if (latest_objects_.poses.size() < 3)
+  {
+    RCLCPP_WARN(this->get_logger(),
+                "Partial pyramid unavailable: fewer than 3 cubes detected.");
+    return false;
+  }
+
+  RCLCPP_WARN(this->get_logger(),
+              "Partial pyramid available with %zu detected cubes.",
+              latest_objects_.poses.size());
+
+  return true;
+}
 
   geometry_msgs::msg::PoseArray generateFullPyramidPoseArray()
   {
@@ -487,36 +547,142 @@ private:
     return ordered_msg;
   }
 
-  geometry_msgs::msg::PoseArray generateBaseFallbackPoseArray()
+geometry_msgs::msg::PoseArray generatePartialPyramidPoseArray()
+{
+  geometry_msgs::msg::PoseArray partial_msg;
+  partial_msg.header = latest_objects_.header;
+  partial_msg.header.frame_id = "base_link";
+
+  const size_t max_publish_count = std::min<size_t>(latest_objects_.poses.size(), 6);
+
+  std::vector<size_t> red_indices = getColourIndices("red");
+  std::vector<size_t> yellow_indices = getColourIndices("yellow");
+  std::vector<size_t> blue_indices = getColourIndices("blue");
+
+  sortByNearest(red_indices);
+  sortByNearest(yellow_indices);
+  sortByNearest(blue_indices);
+
+  std::vector<bool> used(latest_objects_.poses.size(), false);
+
+  auto addIndex = [&](size_t index, const std::string &role)
   {
-    geometry_msgs::msg::PoseArray fallback_msg;
-    fallback_msg.header = latest_objects_.header;
-    fallback_msg.header.frame_id = "base_link";
+    if (partial_msg.poses.size() >= max_publish_count)
+      return;
 
-    std::vector<size_t> all_indices;
+    if (index >= latest_objects_.poses.size())
+      return;
 
-    for (size_t i = 0; i < latest_objects_.poses.size(); ++i)
-    {
-      all_indices.push_back(i);
-    }
+    if (used[index])
+      return;
 
-    sortByNearest(all_indices);
+    const auto &pose = latest_objects_.poses[index];
+    partial_msg.poses.push_back(pose);
+    used[index] = true;
 
-    for (size_t i = 0; i < 3; ++i)
-    {
-      const auto &pose = latest_objects_.poses[all_indices[i]];
-      fallback_msg.poses.push_back(pose);
+    RCLCPP_WARN(this->get_logger(),
+                "Partial sequence added %s | x=%.3f, y=%.3f, z=%.3f, distance=%.3f",
+                role.c_str(),
+                pose.position.x,
+                pose.position.y,
+                pose.position.z,
+                planarDistance(pose));
+  };
 
-      RCLCPP_WARN(this->get_logger(),
-                  "Fallback base cube %zu | x=%.3f, y=%.3f, z=%.3f",
-                  i + 1,
-                  pose.position.x,
-                  pose.position.y,
-                  pose.position.z);
-    }
+  // 1. Fill base layer first: prefer red cubes.
+  for (size_t index : red_indices)
+  {
+    if (partial_msg.poses.size() >= 3)
+      break;
 
-    return fallback_msg;
+    addIndex(index, "base/red");
   }
+
+  // 2. If fewer than 3 red cubes are available, fill base with nearest unused cubes.
+  while (partial_msg.poses.size() < 3)
+  {
+    int nearest_index = findNearestUnusedIndex(used);
+
+    if (nearest_index < 0)
+      break;
+
+    addIndex(static_cast<size_t>(nearest_index), "base/fallback");
+  }
+
+  // 3. Fill middle layer next: prefer yellow cubes.
+  for (size_t index : yellow_indices)
+  {
+    if (partial_msg.poses.size() >= max_publish_count || partial_msg.poses.size() >= 5)
+      break;
+
+    addIndex(index, "middle/yellow");
+  }
+
+  // 4. If 4th/5th cube still needed, fill middle with nearest unused cubes.
+  while (partial_msg.poses.size() < max_publish_count && partial_msg.poses.size() < 5)
+  {
+    int nearest_index = findNearestUnusedIndex(used);
+
+    if (nearest_index < 0)
+      break;
+
+    addIndex(static_cast<size_t>(nearest_index), "middle/fallback");
+  }
+
+  // 5. Add top cube only if 6 cubes are available: prefer blue.
+  if (partial_msg.poses.size() < max_publish_count && max_publish_count >= 6)
+  {
+    bool blue_added = false;
+
+    for (size_t index : blue_indices)
+    {
+      if (!used[index])
+      {
+        addIndex(index, "top/blue");
+        blue_added = true;
+        break;
+      }
+    }
+
+    if (!blue_added && partial_msg.poses.size() < max_publish_count)
+    {
+      int nearest_index = findNearestUnusedIndex(used);
+
+      if (nearest_index >= 0)
+      {
+        addIndex(static_cast<size_t>(nearest_index), "top/fallback");
+      }
+    }
+  }
+
+  RCLCPP_WARN(this->get_logger(),
+              "Partial pyramid sequence generated with %zu pose(s).",
+              partial_msg.poses.size());
+
+  return partial_msg;
+}
+
+int findNearestUnusedIndex(const std::vector<bool> &used)
+{
+  double best_distance = std::numeric_limits<double>::max();
+  int best_index = -1;
+
+  for (size_t i = 0; i < latest_objects_.poses.size(); ++i)
+  {
+    if (used[i])
+      continue;
+
+    double distance = planarDistance(latest_objects_.poses[i]);
+
+    if (distance < best_distance)
+    {
+      best_distance = distance;
+      best_index = static_cast<int>(i);
+    }
+  }
+
+  return best_index;
+}
 
   void appendPoses(
     geometry_msgs::msg::PoseArray &msg,
