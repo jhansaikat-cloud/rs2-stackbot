@@ -303,6 +303,8 @@ mtc::Task RetrievalNode::createPickTask(
   optimising_planner_pick->setTimeout(20.0);
 
   auto interpolation_planner = std::make_shared<mtc::solvers::JointInterpolationPlanner>();
+  interpolation_planner->setMaxVelocityScalingFactor(0.1);
+  interpolation_planner->setMaxAccelerationScalingFactor(0.1);
 
   auto cartesian_planner = std::make_shared<mtc::solvers::CartesianPath>();
   cartesian_planner->setMaxVelocityScalingFactor(0.3);

@@ -5,13 +5,13 @@
 #include <map>
 
 //    CUBE DIMENSIONS                                                            
-static constexpr double CUBE_SIZE       = 0.050;
+static constexpr double CUBE_SIZE       = 0.0505;
 static constexpr double PLACE_CLEARANCE = 0.005;
-static constexpr double SURFACE_Z       = 0.028;
+static constexpr double SURFACE_Z       = 0.027;
 
 //    PYRAMID LAYOUT                                                             
 static constexpr double PYRAMID_X = -0.12;
-static constexpr double PYRAMID_Y = 0.31;
+static constexpr double PYRAMID_Y = 0.30;
 static constexpr double STEP      = CUBE_SIZE + 0.005;
 
 //    HEIGHT HELPERS                                                             

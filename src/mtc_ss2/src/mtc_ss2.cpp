@@ -31,28 +31,29 @@ static const std::string HAND_FRAME  = "gripper_tcp";
 static const std::string FIXED_FRAME = "base_link";
 
 //      CUBE DIMENSIONS                                                                                                                       
-static constexpr double CUBE_SIZE       = 0.050;
-static constexpr double PLACE_CLEARANCE = 0.005;
-static constexpr double SURFACE_Z       = 0.028;
+static constexpr double CUBE_SIZE       = 0.0505; // 5.05cm
+static constexpr double PLACE_CLEARANCE = 0.005;  // 5mm
+static constexpr double SURFACE_Z       = 0.027;
 
 //      PYRAMID LAYOUT                                                                                                                         
 static constexpr double PYRAMID_X = -0.12;
-static constexpr double PYRAMID_Y = 0.3;
+static constexpr double PYRAMID_Y = 0.30;
 static constexpr double STEP      = CUBE_SIZE + 0.005;
 
-//      GRIPPER DOWN ORIENTATION (measured, 180 deg around world Y)                               
+//      GRIPPER DOWN VERT                          
 // static constexpr double GRIPPER_DOWN_QX = 0.0;
 // static constexpr double GRIPPER_DOWN_QY = 1.0;
 // static constexpr double GRIPPER_DOWN_QZ = 0.0;
 // static constexpr double GRIPPER_DOWN_QW = 0.0;
 
+//      GRIPPER DOWN HORZ
 static constexpr double GRIPPER_DOWN_QX =  0.7071;
 static constexpr double GRIPPER_DOWN_QY =  0.7071;
 static constexpr double GRIPPER_DOWN_QZ =  0.0;
 static constexpr double GRIPPER_DOWN_QW =  0.0;
 
 //      PRE-PLACE HEIGHT OFFSET                                                                                                       
-static constexpr double PRE_PLACE_HEIGHT = 0.10;
+static constexpr double PRE_PLACE_HEIGHT = 0.03;
 
 struct CubeInfo
 {
@@ -68,9 +69,9 @@ static const std::vector<CubeInfo> HARDCODED_CUBES = {
   { "cube_1", -0.154,  0.400,  PYRAMID_X,      PYRAMID_Y + STEP, 1,     0.0          }, 
   { "cube_2", -0.020,  0.390,  PYRAMID_X,      PYRAMID_Y, 1,     0.0          }, 
   { "cube_3",  0.130,  0.400,  PYRAMID_X,      PYRAMID_Y - STEP, 1,    -M_PI / 4     },
-  { "cube_4",  0.060,  0.320,  PYRAMID_X,      PYRAMID_Y+ STEP / 2.0, 2,     M_PI / 4     },  
-  { "cube_5",  0.005,  0.240,  PYRAMID_X,      PYRAMID_Y- STEP / 2.0, 2,     M_PI / 5     }, 
-  { "cube_6",  0.100,  0.320,  PYRAMID_X,      PYRAMID_Y, 3,    -M_PI / 3     }, 
+  { "cube_4",  0.080,  0.320,  PYRAMID_X,      PYRAMID_Y+ STEP / 2.0, 2,     M_PI / 4     },  
+  { "cube_5",  0.005,  0.300,  PYRAMID_X,      PYRAMID_Y- STEP / 2.0, 2,     M_PI / 5     }, 
+  { "cube_6",  0.110,  0.240,  PYRAMID_X,      PYRAMID_Y, 3,    -M_PI / 3     }, 
 };
 
 double placeCentreZ(int layer)
@@ -85,9 +86,9 @@ double placeTcpZ(int layer)
   return placeCentreZ(layer) + GRASP_TCP_TO_CUBE_OFFSET;
 }
 
-double prePlaceHeight(int layer) {
-  return (layer == 3) ? 0.05 : 0.10;
-}
+// double prePlaceHeight(int layer) {
+//   return (layer == 3) ? 0.05 : 0.10;
+// }
 
 class MTCPyramidNode
 {
@@ -453,7 +454,7 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
     pre_place.header.frame_id = FIXED_FRAME;
     pre_place.pose.position.x = cube.place_x;
     pre_place.pose.position.y = cube.place_y;
-    pre_place.pose.position.z = placeTcpZ(cube.layer) + prePlaceHeight(cube.layer);
+    pre_place.pose.position.z = placeTcpZ(cube.layer) + PRE_PLACE_HEIGHT;
     pre_place.pose.orientation.x = GRIPPER_DOWN_QX;
     pre_place.pose.orientation.y = GRIPPER_DOWN_QY;
     pre_place.pose.orientation.z = GRIPPER_DOWN_QZ;
@@ -524,7 +525,7 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
     {
       auto stage = std::make_unique<mtc::stages::MoveRelative>("lower", cartesian_planner);
       stage->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
-      stage->setMinMaxDistance(0.04, PRE_PLACE_HEIGHT + 0.05);
+      stage->setMinMaxDistance(0.02, 0.05);
       stage->setIKFrame(HAND_FRAME);
       stage->properties().set("marker_ns", "lower");
       geometry_msgs::msg::Vector3Stamped vec;
@@ -541,6 +542,13 @@ mtc::Task MTCPyramidNode::createPickAndPlaceTask(const CubeInfo& cube)
       stage->setGoal("open");
       place->insert(std::move(stage));
     }
+
+    // Detach cube (using manual)
+    // {
+    //     auto stage = std::make_unique<mtc::stages::ModifyPlanningScene>("detach " + cube.name);
+    //     stage->detachObject(cube.name, HAND_FRAME);
+    //     place->insert(std::move(stage));
+    // }
 
     task.add(std::move(place));
   }
@@ -585,6 +593,7 @@ bool MTCPyramidNode::runPickAndPlace(const CubeInfo& cube)
     return false;
   }
 
+  //      Manual detach after success
   moveit_msgs::msg::AttachedCollisionObject detach;
   detach.object.id = cube.name;
   detach.object.operation = moveit_msgs::msg::CollisionObject::REMOVE;

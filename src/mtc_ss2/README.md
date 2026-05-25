@@ -9,19 +9,24 @@ Change "closed" to "0.049", "open" to "0.100"
       <joint name="finger_width" value="0.100"/>
     </group_state>
 
-Add ready_pose (under test_configuration)
+Add ready_pose2 and search (under test_configuration)
 
+    <group_state name="${prefix}ready_pose2" group="${prefix}${name}_manipulator">
+      <joint name="${prefix}shoulder_pan_joint" value="-0.82" />
+      <joint name="${prefix}wrist_3_joint" value="0.74" />
+      <joint name="${prefix}wrist_2_joint" value="1.57" />
+      <joint name="${prefix}wrist_1_joint" value="-2.24" />
+      <joint name="${prefix}elbow_joint" value="-0.66" />
+      <joint name="${prefix}shoulder_lift_joint" value="-1.8" />
     </group_state>
-        <group_state name="${prefix}ready_pose" group="${prefix}${name}_manipulator">
-      <joint name="${prefix}elbow_joint" value="0.48" />
-      <joint name="${prefix}shoulder_lift_joint" value="-1.46" />
-      <joint name="${prefix}shoulder_pan_joint" value="1.42" />
-      <joint name="${prefix}wrist_1_joint" value="-0.57" />
-      <joint name="${prefix}wrist_2_joint" value="-1.58" />
-      <joint name="${prefix}wrist_3_joint" value="-0.23" />
+    <group_state name="${prefix}search" group="${prefix}${name}_manipulator">
+      <joint name="${prefix}shoulder_pan_joint" value="-1.23" />
+      <joint name="${prefix}wrist_3_joint" value="0.32" />
+      <joint name="${prefix}wrist_2_joint" value="1.57" />
+      <joint name="${prefix}wrist_1_joint" value="-2.78" />
+      <joint name="${prefix}elbow_joint" value="-0.21" />
+      <joint name="${prefix}shoulder_lift_joint" value="-1.70" />
     </group_state>
-
-
 
 In src/ur_onrobot/ur_onrobot_moveit_config/config/controllers.yaml
 

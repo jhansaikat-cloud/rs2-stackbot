@@ -76,12 +76,12 @@
       <joint name="${prefix}shoulder_lift_joint" value="-1.8" />
     </group_state>
     <group_state name="${prefix}search" group="${prefix}${name}_manipulator">
-      <joint name="${prefix}shoulder_pan_joint" value="-1.24" />
+      <joint name="${prefix}shoulder_pan_joint" value="-1.23" />
       <joint name="${prefix}wrist_3_joint" value="0.32" />
       <joint name="${prefix}wrist_2_joint" value="1.57" />
-      <joint name="${prefix}wrist_1_joint" value="-2.53" />
-      <joint name="${prefix}elbow_joint" value="-0.66" />
-      <joint name="${prefix}shoulder_lift_joint" value="-1.51" />
+      <joint name="${prefix}wrist_1_joint" value="-2.78" />
+      <joint name="${prefix}elbow_joint" value="-0.21" />
+      <joint name="${prefix}shoulder_lift_joint" value="-1.70" />
     </group_state>
     <!--END EFFECTOR - Purpose - Represent information about an end effector.-->
     <end_effector name="${prefix}${name}_gripper" parent_link="${prefix}gripper_tcp" group="${prefix}${name}_gripper" parent_group="${prefix}${name}_manipulator"/>
