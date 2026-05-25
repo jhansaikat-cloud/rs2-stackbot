@@ -291,4 +291,4 @@ Then run Terminals 1, 4, and 5 as normal. Positions won't be physically accurate
 | Distinction | ±8mm |
 | High Distinction | ±5mm |
 
-Calibration internal consistency: **1.84mm** — within HD range ✅
+
