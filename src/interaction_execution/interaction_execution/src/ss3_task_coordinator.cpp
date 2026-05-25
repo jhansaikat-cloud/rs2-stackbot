@@ -331,9 +331,14 @@ private:
       return;
     }
 
-    detected_objects_pub_->publish(output_msg);
-    last_published_sequence_ = output_msg;
-    sequence_published_ = true;
+      RCLCPP_INFO(this->get_logger(),
+            "Valid sequence generated. Waiting 2 seconds before publishing to SS2...");
+
+      std::this_thread::sleep_for(std::chrono::seconds(2));
+
+      detected_objects_pub_->publish(output_msg);
+      last_published_sequence_ = output_msg;
+      sequence_published_ = true;
 
     setState(RobotState::SEQUENCE_PUBLISHED);
 
