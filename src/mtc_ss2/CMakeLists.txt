@@ -45,6 +45,9 @@ DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 
+install(DIRECTORY include/
+  DESTINATION include)
+
 if(BUILD_TESTING)
 find_package(ament_lint_auto REQUIRED)
 # the following line skips the linter which checks for copyrights
@@ -56,4 +59,5 @@ find_package(ament_lint_auto REQUIRED)
 ament_lint_auto_find_test_dependencies()
 endif()
 
+ament_export_include_directories(include)
 ament_package()
