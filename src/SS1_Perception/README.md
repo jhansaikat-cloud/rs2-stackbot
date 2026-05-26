@@ -25,20 +25,20 @@ The pyramid uses 6 cubes across 3 colours:
 
 | Component | Details |
 |---|---|
-| Robot | UR3e — IP: 192.168.0.192 |
+| Robot | UR3e — IP: 192.168.0.XXX |
 | Camera | Intel RealSense D435i — wrist mounted (eye-in-hand) |
 | Gripper | OnRobot RG2-FT — mounted below camera |
 | OS | Ubuntu 22.04 |
 | Framework | ROS2 Humble, Python 3.10, OpenCV 4.5.4 |
 
-> Camera serial changes every session. Check serial at start of each session and redo hand-eye calibration if it has changed (see below).
+> Camera serial changes and UR3e IP adresss every session and redo hand-eye calibration if it has changed (see below).
 
 ---
 
 ## Dependencies
 
 ```bash
-# TF transformations
+# TF transformations (required for yaw correction)
 sudo apt install ros-humble-tf-transformations
 
 # TF2 geometry messages
@@ -49,33 +49,94 @@ sudo apt install ros-humble-cv-bridge
 
 # RealSense ROS2 driver
 sudo apt install ros-humble-realsense2-camera
+
+# Required for OnRobot driver build
+sudo apt install libnet1-dev
 ```
+
+> **Important:** Do NOT set `ROS_DOMAIN_ID` in `~/.bashrc`. Leave it at the default (0) or the robot driver and team nodes will not communicate.
 
 ---
 
 ## Build
 
+Clone the team repo if not already on your machine:
+
 ```bash
-cd ~/ros2_ws_backup
+git clone https://github.com/jhansaikat-cloud/rs2-stackbot.git
+cd ~/rs2-stackbot
+```
+
+Build SS1 perception package:
+
+```bash
+cd ~/rs2-stackbot
 colcon build --packages-select perception_pkg
 source install/setup.bash
+```
+
+SS1 files are located at:
+```
+~/rs2-stackbot/src/SS1_Perception/
+├── perception_pkg/         ← Python nodes
+├── calibration/            ← Hand-eye calibration JSON files
+└── README.md
 ```
 
 ---
 
 ## Full System Run Order
 
-Open terminals in this order. Do not skip steps.
+Open each command in a **separate terminal**, in this order. Do not skip steps.
 
-| Terminal | Command |
-|---|---|
-| T1 | `ros2 launch realsense2_camera rs_launch.py rgb_camera.color_profile:=1280x720x30 depth_module.profile:=640x480x30 enable_depth:=true align_depth.enable:=true publish_tf:=false` |
-| T2 | `ros2 launch ur_robot_driver ur_control.launch.py ur_type:=ur3e robot_ip:=192.168.0.192 kinematics_params_file:=/home/arjun/my_robot_calibration_192.yaml launch_rviz:=false` |
-| T3 | `ros2 launch ur_onrobot_moveit_config ur_onrobot_moveit.launch.py ur_type:=ur3e onrobot_type:=rg2` |
-| T4 | `ros2 run perception_pkg publish_handeye_tf --method park` |
-| T5 | `ros2 run perception_pkg pose_estimator_v2` |
+**T1 — Camera**
+```bash
+source /opt/ros/humble/setup.bash
+ros2 launch realsense2_camera rs_launch.py \
+  rgb_camera.color_profile:=1280x720x30 \
+  depth_module.profile:=640x480x30 \
+  enable_depth:=true \
+  align_depth.enable:=true \
+  publish_tf:=false
+```
 
-> **Important:** Always use `publish_tf:=false` in T1. Always use the full path `/home/arjun/` not `~/` for `kinematics_params_file` in T2. T3 is only needed for the full team pipeline.
+**T2 — Robot Driver**
+```bash
+source /opt/ros/humble/setup.bash
+source ~/ros2_ws/install/setup.bash
+ros2 launch ur_robot_driver ur_control.launch.py \
+  ur_type:=ur3e \
+  robot_ip:=192.168.0.XXX \
+  kinematics_params_file:=/home/arjun/my_robot_calibration_192.yaml \
+  launch_rviz:=false
+```
+
+**T3 — MoveIt (only needed for full team pipeline)**
+```bash
+source /opt/ros/humble/setup.bash
+source ~/ros2_ws/install/setup.bash
+ros2 launch ur_onrobot_moveit_config ur_onrobot_moveit.launch.py \
+  ur_type:=ur3e \
+  onrobot_type:=rg2
+```
+
+**T4 — Hand-Eye TF Publisher**
+```bash
+cd ~/rs2-stackbot && source install/setup.bash
+ros2 run perception_pkg publish_handeye_tf --method park
+```
+
+**T5 — Pose Estimator (Main Node)**
+```bash
+cd ~/rs2-stackbot && source install/setup.bash
+ros2 run perception_pkg pose_estimator_v2
+```
+
+> **Important reminders:**
+> - Always use `publish_tf:=false` in T1 — otherwise two conflicting TF trees appear
+> - Always use the full path `/home/arjun/` not `~/` for `kinematics_params_file` in T2
+> - Always ping the robot first: `ping 192.168.0.192` — IP can change between sessions
+> - T3 is only needed when running the full team pipeline with SS2 and SS3
 
 ---
 
@@ -83,10 +144,10 @@ Open terminals in this order. Do not skip steps.
 
 | Node | Command | Purpose |
 |---|---|---|
-| pose_estimator_v2 | `ros2 run perception_pkg pose_estimator_v2` | Main node — detects cubes and publishes 3D poses |
-| publish_handeye_tf | `ros2 run perception_pkg publish_handeye_tf --method park` | Publishes hand-eye calibration TF to the system |
-| charuco_handeye_calibration | `ros2 run perception_pkg charuco_handeye_calibration` | Run once to calibrate camera to robot |
-| charuco_handeye_validate | `ros2 run perception_pkg charuco_handeye_validate --method park` | Validates calibration accuracy |
+| `pose_estimator_v2` | `ros2 run perception_pkg pose_estimator_v2` | Main node — detects cubes and publishes 3D poses |
+| `publish_handeye_tf` | `ros2 run perception_pkg publish_handeye_tf --method park` | Publishes hand-eye calibration TF to the system |
+| `charuco_handeye_calibration` | `ros2 run perception_pkg charuco_handeye_calibration` | Run once to calibrate camera to robot |
+| `charuco_handeye_validate` | `ros2 run perception_pkg charuco_handeye_validate --method park` | Validates calibration accuracy |
 
 ---
 
@@ -116,10 +177,10 @@ Open terminals in this order. Do not skip steps.
 Check at the start of every session:
 
 ```bash
-# Check serial number
+# 1. Check serial number
 rs-enumerate-devices | grep Serial
 
-# Check intrinsics
+# 2. Check intrinsics
 ros2 topic echo /camera/camera/color/camera_info --once
 ```
 
@@ -166,9 +227,9 @@ Tuned under warm indoor lab lighting at UTS:
 
 ## Hand-Eye Calibration
 
-Calibration files location:
+Calibration files are located at:
 ```
-~/ros2_ws_backup/src/perception_pkg/calibration/
+~/rs2-stackbot/src/SS1_Perception/calibration/
 ├── handeye_charuco_park.json       ← USE THIS (1.84mm std)
 ├── handeye_charuco_tsai.json
 ├── handeye_charuco_daniilidis.json
@@ -180,12 +241,19 @@ Must redo calibration if the camera serial changes between sessions.
 
 ### Calibration Run Order
 
-| Terminal | Command |
-|---|---|
-| T1 | Camera launch (same as Full System T1) |
-| T2 | Robot driver launch (same as Full System T2) |
-| T3 | `ros2 run perception_pkg charuco_handeye_calibration` |
-| T4 | `ros2 run perception_pkg charuco_handeye_validate --method park` |
+T1 and T2 must be running first, then:
+
+```bash
+# Run calibration
+cd ~/rs2-stackbot && source install/setup.bash
+ros2 run perception_pkg charuco_handeye_calibration
+# Press SPACE to capture a sample (get 15–20, vary angle and distance)
+# Press S to solve — pick method with lowest std deviation
+
+# Validate the result
+ros2 run perception_pkg charuco_handeye_validate --method park
+# Z must be positive and between 50–500mm
+```
 
 ### ChArUco Board Specs
 
@@ -209,13 +277,13 @@ Must redo calibration if the camera serial changes between sessions.
 
 | Method | Std Dev |
 |---|---|
-| Park | 1.84mm ✅ |
-| Tsai | 1.84mm |
-| Daniilidis | 1.84mm |
-| Horaud | 1.84mm |
-| Andreff | 1.86mm |
+| Park | 0.84mm  |
+| Tsai | 0.84mm |
+| Daniilidis |0.84mm |
+| Horaud | 0.85mm |
+| Andreff | 0.92mm |
 
-Validation result: `X=144.4mm  Y=404.5mm  Z=24.3mm` — variation < 0.1mm ✅
+Validation result: `X=144.4mm  Y=404.5mm  Z=24.3mm` — variation < 0.1mm 
 
 ---
 
@@ -229,18 +297,24 @@ camera_color_optical_frame → cube       (pose_estimator_v2 depth projection)
 base_link → cube                        (published on /raw_detected_objects)
 ```
 
+> Note: `base` and `base_link` are NOT the same frame — they have a 180° rotation between them. Always use `base_link`.
+
 ---
 
 ## Diagnostic Commands
 
 ```bash
+# Confirm robot IP is reachable
+ping 192.168.0.XXX
+
+# Check TF chain is fully connected
+ros2 run tf2_ros tf2_echo base_link tool0
+ros2 run tf2_ros tf2_echo base_link camera_color_optical_frame
+
 # Check poses publishing
 ros2 topic echo /raw_detected_objects
 ros2 topic echo /object_labels
 ros2 topic hz /raw_detected_objects
-
-# Check TF chain is connected
-ros2 run tf2_ros tf2_echo base_link camera_color_optical_frame
 
 # View full TF tree
 ros2 run tf2_tools view_frames && evince frames.pdf
@@ -249,11 +323,13 @@ ros2 run tf2_tools view_frames && evince frames.pdf
 ros2 topic list
 ```
 
+Expected labels output: `red,red,red,yellow,yellow,blue`
+
 ---
 
 ## Testing Without a Robot
 
-Run a fake TF instead of the real robot driver (Terminal 2):
+Replace T2 (robot driver) with a fake static transform:
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -264,7 +340,7 @@ ros2 run tf2_ros static_transform_publisher \
   --child-frame-id tool0
 ```
 
-Then run Terminals 1, 4, and 5 as normal. Positions won't be physically accurate but detection and labels will work.
+Then run T1, T4, and T5 as normal. Positions won't be physically accurate without the real robot but detection and labels will work for verification.
 
 ---
 
@@ -272,13 +348,15 @@ Then run Terminals 1, 4, and 5 as normal. Positions won't be physically accurate
 
 | Issue | Cause | Fix |
 |---|---|---|
-| `no TF` shown on cubes | TF tree disconnected | Run `ros2 run tf2_ros tf2_echo base_link camera_color_optical_frame` — relaunch T2/T4 |
+| `no TF` shown on cubes | TF tree disconnected | Run `ros2 run tf2_ros tf2_echo base_link camera_color_optical_frame` — relaunch T2 and T4 |
 | Two disconnected TF trees | RealSense publishing its own TF | Always launch camera with `publish_tf:=false` |
-| Camera window not opening | `DISPLAY` not set | `export DISPLAY=:1` then rerun |
-| Missing yellow cube | Depth invalid at that pixel (USB bandwidth) | Plug into USB 3.0 (blue) port; increase `DEPTH_WINDOW_FB` to 60 |
-| Poses have negative Z | Hand-eye calibration wrong | Redo calibration — Z must be positive |
+| Camera window not opening | `DISPLAY` not set | `export DISPLAY=:1` then rerun T5 |
+| Missing yellow cube | Depth invalid — USB bandwidth | Plug camera into USB 3.0 (blue) port; try `DEPTH_WINDOW_FB = 60` |
+| Poses have negative Z | Hand-eye calibration inverted | Redo calibration — Z must be positive |
 | `tilde not expanding` in launch | Shell not expanding `~/` | Use `/home/arjun/` not `~/` for `kinematics_params_file` |
 | TF extrapolation warning | Timestamp mismatch | Use `rclpy.time.Time().to_msg()` not `colour_msg.header.stamp` |
+| Robot driver crash — speed_slider_mask | Another RTDE client connected | Stop pendant program, run `pkill -f ur_ros2_control_node`, relaunch T2 |
+| Wrong robot IP | IP changed between sessions | Always `ping 192.168.0.192` first — update yaml filename if IP changed |
 
 ---
 
@@ -291,4 +369,4 @@ Then run Terminals 1, 4, and 5 as normal. Positions won't be physically accurate
 | Distinction | ±8mm |
 | High Distinction | ±5mm |
 
-
+Calibration internal consistency: **0.84mm** — within HD range 
