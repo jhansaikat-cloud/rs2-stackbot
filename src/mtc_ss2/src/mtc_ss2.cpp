@@ -691,13 +691,13 @@ void MTCPyramidNode::run()
     { detected_poses = msg; });
 
   // 1. Wait with timeout, fall back to hardcoded if no SS3 data
-  auto deadline = node_->now() + rclcpp::Duration::from_seconds(5.0);
-  while (rclcpp::ok() && node_->now() < deadline && detected_poses == nullptr)
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  // auto deadline = node_->now() + rclcpp::Duration::from_seconds(5.0);
+  // while (rclcpp::ok() && node_->now() < deadline && detected_poses == nullptr)
+  //   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
   // 2. Wait indefinitely until SS3 publishes (no fallback)
-  // while (rclcpp::ok() && detected_poses == nullptr)
-  //   std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  while (rclcpp::ok() && detected_poses == nullptr)
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
   static const std::array<std::tuple<double, double, int>, 6> place_positions = {{
     { PYRAMID_X,              PYRAMID_Y + STEP, 1 },
