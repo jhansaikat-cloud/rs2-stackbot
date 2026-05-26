@@ -9,10 +9,13 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <functional>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
+#include <cctype>
 
 class SS3TaskCoordinator : public rclcpp::Node
 {
@@ -49,19 +52,78 @@ public:
       std::chrono::seconds(1),
       std::bind(&SS3TaskCoordinator::republishSequence, this));
 
+    setState(RobotState::IDLE);
+
     RCLCPP_INFO(this->get_logger(), "SS3 ready. Waiting for /client/start.");
   }
 
 private:
+  enum class RobotState
+  {
+    IDLE,
+    MOVING_TO_SEARCH,
+    WAITING_FOR_DETECTION,
+    VALIDATING,
+    SEQUENCE_PUBLISHED,
+    RETRIEVAL_READY,
+    RESETTING,
+    ERROR
+  };
+
   geometry_msgs::msg::PoseArray latest_objects_;
   geometry_msgs::msg::PoseArray last_published_sequence_;
   std::vector<std::string> latest_labels_;
+
+  RobotState state_ = RobotState::IDLE;
 
   bool objects_received_ = false;
   bool labels_received_ = false;
   bool task_active_ = false;
   bool sequence_published_ = false;
   bool search_position_reached_ = false;
+
+  int search_retry_count_ = 0;
+  const int max_search_retries_ = 2;
+
+  int stable_detection_count_ = 0;
+  const int required_stable_detections_ = 3;
+  std::string last_detection_signature_;
+
+  const int perception_settle_seconds_ = 5;
+  const int full_detection_wait_seconds_ = 3;
+  bool partial_wait_done_ = false;
+  bool partial_wait_in_progress_ = false;
+
+  void setState(RobotState new_state)
+  {
+    state_ = new_state;
+    RCLCPP_INFO(this->get_logger(), "SS3 state changed to: %s", stateToString(state_).c_str());
+  }
+
+  std::string stateToString(RobotState state)
+  {
+    switch (state)
+    {
+      case RobotState::IDLE:
+        return "IDLE";
+      case RobotState::MOVING_TO_SEARCH:
+        return "MOVING_TO_SEARCH";
+      case RobotState::WAITING_FOR_DETECTION:
+        return "WAITING_FOR_DETECTION";
+      case RobotState::VALIDATING:
+        return "VALIDATING";
+      case RobotState::SEQUENCE_PUBLISHED:
+        return "SEQUENCE_PUBLISHED";
+      case RobotState::RETRIEVAL_READY:
+        return "RETRIEVAL_READY";
+      case RobotState::RESETTING:
+        return "RESETTING";
+      case RobotState::ERROR:
+        return "ERROR";
+      default:
+        return "UNKNOWN";
+    }
+  }
 
   bool moveToSearchPosition()
   {
@@ -71,19 +133,9 @@ private:
       shared_from_this(),
       "ur_onrobot_manipulator");
 
-    std::vector<double> search_joint_values =
-    {
-      -1.3379457632647913,   // shoulder_pan_joint
-      -1.676735063592428,    // shoulder_lift_joint
-      -0.06869813799858093,  // elbow_joint
-      -2.7657791576781214,   // wrist_1_joint
-       1.5695604085922241,   // wrist_2_joint
-       0.19399519264698029   // wrist_3_joint
-    };
-
-    move_group.setJointValueTarget(search_joint_values);
+    move_group.setNamedTarget("search");
     move_group.setPlanningTime(10.0);
-    move_group.setNumPlanningAttempts(1);
+    move_group.setNumPlanningAttempts(3);
     move_group.setMaxVelocityScalingFactor(0.10);
     move_group.setMaxAccelerationScalingFactor(0.10);
 
@@ -115,35 +167,71 @@ private:
     task_active_ = true;
     sequence_published_ = false;
     search_position_reached_ = false;
+    search_retry_count_ = 0;
+    stable_detection_count_ = 0;
+    partial_wait_done_ = false;
+    partial_wait_in_progress_ = false;
+    last_detection_signature_.clear();
 
     clearPerceptionCache();
     last_published_sequence_.poses.clear();
 
+    setState(RobotState::MOVING_TO_SEARCH);
+
     std::thread([this]()
     {
-      bool success = moveToSearchPosition();
-
-      if (!task_active_)
+      while (task_active_ && search_retry_count_ <= max_search_retries_)
       {
-        RCLCPP_WARN(this->get_logger(),
-                    "Search movement finished, but task was reset/cancelled.");
-        return;
+        bool success = moveToSearchPosition();
+
+        if (!task_active_)
+        {
+          RCLCPP_WARN(this->get_logger(),
+                      "Search movement finished, but task was reset/cancelled.");
+          return;
+        }
+
+        if (success)
+        {
+          search_position_reached_ = true;
+          setState(RobotState::WAITING_FOR_DETECTION);
+
+          RCLCPP_INFO(this->get_logger(),
+                      "Search position reached. Waiting %d seconds for SS1 perception to stabilise...",
+                      perception_settle_seconds_);
+
+          std::this_thread::sleep_for(std::chrono::seconds(perception_settle_seconds_));
+
+          if (!task_active_)
+          {
+            RCLCPP_WARN(this->get_logger(),
+                        "Perception settling finished, but task was reset/cancelled.");
+            return;
+          }
+
+          RCLCPP_INFO(this->get_logger(),
+                      "Perception settling complete. SS3 will now process SS1 detections.");
+
+          tryPublishSequence();
+          return;
+        }
+
+        search_retry_count_++;
+
+        if (search_retry_count_ <= max_search_retries_)
+        {
+          RCLCPP_WARN(this->get_logger(),
+                      "Search position retry %d/%d",
+                      search_retry_count_,
+                      max_search_retries_);
+        }
       }
 
-      if (!success)
-      {
-        RCLCPP_ERROR(this->get_logger(),
-                     "Search position failed. Task remains inactive.");
-        task_active_ = false;
-        return;
-      }
+      RCLCPP_ERROR(this->get_logger(),
+                   "Search position failed after maximum retries.");
 
-      search_position_reached_ = true;
-
-      RCLCPP_INFO(this->get_logger(),
-                  "Search position complete. Waiting for SS1 cube poses and labels.");
-
-      tryPublishSequence();
+      task_active_ = false;
+      setState(RobotState::ERROR);
 
     }).detach();
   }
@@ -153,12 +241,21 @@ private:
     if (!msg->data)
       return;
 
+    setState(RobotState::RESETTING);
+
     task_active_ = false;
     sequence_published_ = false;
     search_position_reached_ = false;
+    search_retry_count_ = 0;
+    stable_detection_count_ = 0;
+    partial_wait_done_ = false;
+    partial_wait_in_progress_ = false;
+    last_detection_signature_.clear();
 
     clearPerceptionCache();
     last_published_sequence_.poses.clear();
+
+    setState(RobotState::IDLE);
 
     RCLCPP_INFO(this->get_logger(), "SS3 reset complete. Ready for next task.");
   }
@@ -168,7 +265,7 @@ private:
     latest_objects_ = *msg;
     objects_received_ = true;
 
-    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 3000,
                          "Received %zu raw detected object poses.",
                          latest_objects_.poses.size());
 
@@ -180,7 +277,7 @@ private:
     latest_labels_ = splitLabels(msg->data);
     labels_received_ = true;
 
-    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 3000,
                          "Received object labels: %s",
                          msg->data.c_str());
 
@@ -193,6 +290,8 @@ private:
     out.data = msg->data;
 
     retrieve_pub_->publish(out);
+
+    setState(RobotState::RETRIEVAL_READY);
 
     RCLCPP_INFO(this->get_logger(),
                 "Forwarded retrieval request to SS2: %s",
@@ -210,28 +309,79 @@ private:
     if (!objects_received_ || !labels_received_)
       return;
 
+    if (!hasStableDetection())
+      return;
+
     geometry_msgs::msg::PoseArray output_msg;
+
+    setState(RobotState::VALIDATING);
 
     if (validateFullPyramid())
     {
       output_msg = generateFullPyramidPoseArray();
       RCLCPP_INFO(this->get_logger(), "Publishing FULL PYRAMID sequence.");
     }
-    else if (canBuildBaseFallback())
+    else if (canBuildPartialPyramid())
     {
-      output_msg = generateBaseFallbackPoseArray();
-      RCLCPP_WARN(this->get_logger(), "Publishing BASE-ONLY fallback sequence.");
+      if (!partial_wait_done_)
+      {
+        if (!partial_wait_in_progress_)
+        {
+          partial_wait_in_progress_ = true;
+
+          RCLCPP_WARN(this->get_logger(),
+                      "Partial sequence available, but waiting %d seconds for possible full 6-cube detection...",
+                      full_detection_wait_seconds_);
+
+          std::thread([this]()
+          {
+            std::this_thread::sleep_for(std::chrono::seconds(full_detection_wait_seconds_));
+
+            if (!task_active_ || sequence_published_)
+              return;
+
+            partial_wait_done_ = true;
+            partial_wait_in_progress_ = false;
+
+            RCLCPP_WARN(this->get_logger(),
+                        "Full detection wait window finished. Proceeding with best available sequence.");
+
+            tryPublishSequence();
+
+          }).detach();
+        }
+
+        setState(RobotState::WAITING_FOR_DETECTION);
+        return;
+      }
+
+      output_msg = generatePartialPyramidPoseArray();
+
+      RCLCPP_WARN(this->get_logger(),
+                  "Publishing PARTIAL PYRAMID sequence with %zu pose(s).",
+                  output_msg.poses.size());
     }
     else
     {
       RCLCPP_WARN(this->get_logger(),
                   "No valid sequence available yet. Waiting for better SS1 data.");
+      setState(RobotState::WAITING_FOR_DETECTION);
       return;
     }
+
+    RCLCPP_INFO(this->get_logger(),
+                "Valid sequence generated. Waiting 2 seconds before publishing to SS2...");
+
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    if (!task_active_ || sequence_published_)
+      return;
 
     detected_objects_pub_->publish(output_msg);
     last_published_sequence_ = output_msg;
     sequence_published_ = true;
+
+    setState(RobotState::SEQUENCE_PUBLISHED);
 
     RCLCPP_INFO(this->get_logger(),
                 "Published %zu ordered cube poses to SS2 on /detected_objects.",
@@ -254,6 +404,55 @@ private:
     RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
                          "Republishing %zu ordered cube poses to /detected_objects.",
                          last_published_sequence_.poses.size());
+  }
+
+  bool hasStableDetection()
+  {
+    std::string current_signature = createDetectionSignature();
+
+    if (current_signature == last_detection_signature_)
+    {
+      stable_detection_count_++;
+    }
+    else
+    {
+      last_detection_signature_ = current_signature;
+      stable_detection_count_ = 1;
+    }
+
+    if (stable_detection_count_ < required_stable_detections_)
+    {
+      RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+                           "Waiting for stable detections: %d/%d",
+                           stable_detection_count_,
+                           required_stable_detections_);
+      return false;
+    }
+
+    return true;
+  }
+
+  std::string createDetectionSignature()
+  {
+    std::stringstream ss;
+
+    ss << latest_objects_.poses.size() << "|";
+
+    for (const auto &pose : latest_objects_.poses)
+    {
+      ss << static_cast<int>(pose.position.x * 1000.0) << ","
+         << static_cast<int>(pose.position.y * 1000.0) << ","
+         << static_cast<int>(pose.position.z * 1000.0) << ";";
+    }
+
+    ss << "|";
+
+    for (const auto &label : latest_labels_)
+    {
+      ss << label << ",";
+    }
+
+    return ss.str();
   }
 
   bool validateFullPyramid()
@@ -298,24 +497,25 @@ private:
     return true;
   }
 
-  bool canBuildBaseFallback()
+  bool canBuildPartialPyramid()
   {
-    if (latest_objects_.poses.size() < 3)
-    {
-      RCLCPP_WARN(this->get_logger(),
-                  "Base fallback unavailable: fewer than 3 cubes detected.");
-      return false;
-    }
-
     if (latest_objects_.poses.size() != latest_labels_.size())
     {
       RCLCPP_WARN(this->get_logger(),
-                  "Base fallback unavailable: pose-label mismatch.");
+                  "Partial pyramid unavailable: pose-label mismatch.");
+      return false;
+    }
+
+    if (latest_objects_.poses.size() < 3)
+    {
+      RCLCPP_WARN(this->get_logger(),
+                  "Partial pyramid unavailable: fewer than 3 cubes detected.");
       return false;
     }
 
     RCLCPP_WARN(this->get_logger(),
-                "Base fallback available: using nearest 3 detected cubes.");
+                "Partial pyramid available with %zu detected cubes.",
+                latest_objects_.poses.size());
 
     return true;
   }
@@ -336,9 +536,9 @@ private:
 
     RCLCPP_INFO(this->get_logger(), "Ordered full sequence for SS2:");
 
-    appendPoses(ordered_msg, red_indices, "red/base");
-    appendPoses(ordered_msg, yellow_indices, "yellow/middle");
-    appendPoses(ordered_msg, blue_indices, "blue/top");
+    appendPoses(ordered_msg, red_indices, "base/red");
+    appendPoses(ordered_msg, yellow_indices, "middle/yellow");
+    appendPoses(ordered_msg, blue_indices, "top/blue");
 
     RCLCPP_INFO(this->get_logger(),
                 "Ordering complete: red base, yellow middle layer, blue top.");
@@ -346,35 +546,136 @@ private:
     return ordered_msg;
   }
 
-  geometry_msgs::msg::PoseArray generateBaseFallbackPoseArray()
+  geometry_msgs::msg::PoseArray generatePartialPyramidPoseArray()
   {
-    geometry_msgs::msg::PoseArray fallback_msg;
-    fallback_msg.header = latest_objects_.header;
-    fallback_msg.header.frame_id = "base_link";
+    geometry_msgs::msg::PoseArray partial_msg;
+    partial_msg.header = latest_objects_.header;
+    partial_msg.header.frame_id = "base_link";
 
-    std::vector<size_t> all_indices;
+    const size_t max_publish_count = std::min<size_t>(latest_objects_.poses.size(), 6);
+
+    std::vector<size_t> red_indices = getColourIndices("red");
+    std::vector<size_t> yellow_indices = getColourIndices("yellow");
+    std::vector<size_t> blue_indices = getColourIndices("blue");
+
+    sortByNearest(red_indices);
+    sortByNearest(yellow_indices);
+    sortByNearest(blue_indices);
+
+    std::vector<bool> used(latest_objects_.poses.size(), false);
+
+    auto addIndex = [&](size_t index, const std::string &role)
+    {
+      if (partial_msg.poses.size() >= max_publish_count)
+        return;
+
+      if (index >= latest_objects_.poses.size())
+        return;
+
+      if (used[index])
+        return;
+
+      const auto &pose = latest_objects_.poses[index];
+      partial_msg.poses.push_back(pose);
+      used[index] = true;
+
+      RCLCPP_WARN(this->get_logger(),
+                  "Partial sequence added %s | x=%.3f, y=%.3f, z=%.3f, distance=%.3f",
+                  role.c_str(),
+                  pose.position.x,
+                  pose.position.y,
+                  pose.position.z,
+                  planarDistance(pose));
+    };
+
+    for (size_t index : red_indices)
+    {
+      if (partial_msg.poses.size() >= 3)
+        break;
+
+      addIndex(index, "base/red");
+    }
+
+    while (partial_msg.poses.size() < 3)
+    {
+      int nearest_index = findNearestUnusedIndex(used);
+
+      if (nearest_index < 0)
+        break;
+
+      addIndex(static_cast<size_t>(nearest_index), "base/fallback");
+    }
+
+    for (size_t index : yellow_indices)
+    {
+      if (partial_msg.poses.size() >= max_publish_count || partial_msg.poses.size() >= 5)
+        break;
+
+      addIndex(index, "middle/yellow");
+    }
+
+    while (partial_msg.poses.size() < max_publish_count && partial_msg.poses.size() < 5)
+    {
+      int nearest_index = findNearestUnusedIndex(used);
+
+      if (nearest_index < 0)
+        break;
+
+      addIndex(static_cast<size_t>(nearest_index), "middle/fallback");
+    }
+
+    if (partial_msg.poses.size() < max_publish_count && max_publish_count >= 6)
+    {
+      bool blue_added = false;
+
+      for (size_t index : blue_indices)
+      {
+        if (!used[index])
+        {
+          addIndex(index, "top/blue");
+          blue_added = true;
+          break;
+        }
+      }
+
+      if (!blue_added && partial_msg.poses.size() < max_publish_count)
+      {
+        int nearest_index = findNearestUnusedIndex(used);
+
+        if (nearest_index >= 0)
+        {
+          addIndex(static_cast<size_t>(nearest_index), "top/fallback");
+        }
+      }
+    }
+
+    RCLCPP_WARN(this->get_logger(),
+                "Partial pyramid sequence generated with %zu pose(s).",
+                partial_msg.poses.size());
+
+    return partial_msg;
+  }
+
+  int findNearestUnusedIndex(const std::vector<bool> &used)
+  {
+    double best_distance = std::numeric_limits<double>::max();
+    int best_index = -1;
 
     for (size_t i = 0; i < latest_objects_.poses.size(); ++i)
     {
-      all_indices.push_back(i);
+      if (used[i])
+        continue;
+
+      double distance = planarDistance(latest_objects_.poses[i]);
+
+      if (distance < best_distance)
+      {
+        best_distance = distance;
+        best_index = static_cast<int>(i);
+      }
     }
 
-    sortByNearest(all_indices);
-
-    for (size_t i = 0; i < 3; ++i)
-    {
-      const auto &pose = latest_objects_.poses[all_indices[i]];
-      fallback_msg.poses.push_back(pose);
-
-      RCLCPP_WARN(this->get_logger(),
-                  "Fallback base cube %zu | x=%.3f, y=%.3f, z=%.3f",
-                  i + 1,
-                  pose.position.x,
-                  pose.position.y,
-                  pose.position.z);
-    }
-
-    return fallback_msg;
+    return best_index;
   }
 
   void appendPoses(
@@ -446,7 +747,11 @@ private:
         std::remove(label.begin(), label.end(), ' '),
         label.end());
 
-      std::transform(label.begin(), label.end(), label.begin(), ::tolower);
+      std::transform(label.begin(), label.end(), label.begin(),
+                     [](unsigned char c)
+                     {
+                       return static_cast<char>(std::tolower(c));
+                     });
 
       if (!label.empty())
       {
