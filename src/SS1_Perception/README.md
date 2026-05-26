@@ -25,9 +25,9 @@ The pyramid uses 6 cubes across 3 colours:
 
 | Component | Details |
 |---|---|
-| Robot | UR3e — IP: 192.168.0.XXX |
-| Camera | Intel RealSense D435i — wrist mounted (eye-in-hand) |
-| Gripper | OnRobot RG2-FT — mounted below camera |
+| Robot | UR3e IP: 192.168.0.XXX |
+| Camera | Intel RealSense D435i wrist mounted (eye-in-hand) |
+| Gripper | OnRobot RG2-FT mounted below camera |
 | OS | Ubuntu 22.04 |
 | Framework | ROS2 Humble, Python 3.10, OpenCV 4.5.4 |
 
