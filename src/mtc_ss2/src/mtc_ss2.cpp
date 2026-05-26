@@ -66,12 +66,12 @@ struct CubeInfo
 
 static const std::vector<CubeInfo> HARDCODED_CUBES = {
   // name,    pick_x,  pick_y,  place_x,       place_y,   layer, yaw
-  { "cube_1", -0.154,  0.400,  PYRAMID_X,      PYRAMID_Y + STEP, 1,     0.0          }, 
-  { "cube_2", -0.020,  0.390,  PYRAMID_X,      PYRAMID_Y, 1,     0.0          }, 
-  { "cube_3",  0.130,  0.400,  PYRAMID_X,      PYRAMID_Y - STEP, 1,    -M_PI / 4     },
+  { "cube_1", -0.154,  0.400,  PYRAMID_X,      PYRAMID_Y + STEP,      1,     0.0          }, 
+  { "cube_2", -0.020,  0.390,  PYRAMID_X,      PYRAMID_Y,             1,     0.0          }, 
+  { "cube_3",  0.130,  0.400,  PYRAMID_X,      PYRAMID_Y - STEP,      1,    -M_PI / 4     },
   { "cube_4",  0.080,  0.320,  PYRAMID_X,      PYRAMID_Y+ STEP / 2.0, 2,     M_PI / 4     },  
   { "cube_5",  0.005,  0.300,  PYRAMID_X,      PYRAMID_Y- STEP / 2.0, 2,     M_PI / 5     }, 
-  { "cube_6",  0.110,  0.240,  PYRAMID_X,      PYRAMID_Y, 3,    -M_PI / 3     }, 
+  { "cube_6",  0.110,  0.240,  PYRAMID_X,      PYRAMID_Y,              3,    -M_PI / 3     }, 
 };
 
 double placeCentreZ(int layer)
@@ -690,14 +690,14 @@ void MTCPyramidNode::run()
     [&detected_poses](geometry_msgs::msg::PoseArray::SharedPtr msg)
     { detected_poses = msg; });
 
-  // 1. Wait with timeout, fall back to hardcoded if no SS3 data
-  // auto deadline = node_->now() + rclcpp::Duration::from_seconds(5.0);
-  // while (rclcpp::ok() && node_->now() < deadline && detected_poses == nullptr)
-  //   std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  // 1. Wait with timeout, fall back to hardcoded if no SS3 data (for fake hardware testing)
+  auto deadline = node_->now() + rclcpp::Duration::from_seconds(5.0);
+  while (rclcpp::ok() && node_->now() < deadline && detected_poses == nullptr)
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
   // 2. Wait indefinitely until SS3 publishes (no fallback)
-  while (rclcpp::ok() && detected_poses == nullptr)
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  // while (rclcpp::ok() && detected_poses == nullptr)
+  //   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
   static const std::array<std::tuple<double, double, int>, 6> place_positions = {{
     { PYRAMID_X,              PYRAMID_Y + STEP, 1 },
